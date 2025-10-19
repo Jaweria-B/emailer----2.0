@@ -178,18 +178,19 @@ export const userDb = {
 // Email verification operations
 export const verificationDb = {
   // Create verification code
-  create: async (email, code) => {
+  create: async (email, code, userData) => {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     
     // Use upsert pattern
     await sql`
-      INSERT INTO email_verification (email, verification_code, expires_at, attempts)
-      VALUES (${email}, ${code}, ${expiresAt.toISOString()}, 0)
+      INSERT INTO email_verification (email, verification_code, expires_at, attempts, user_data)
+      VALUES (${email}, ${code}, ${expiresAt.toISOString()}, 0, ${userData ? JSON.stringify(userData) : null})
       ON CONFLICT (email) 
       DO UPDATE SET 
         verification_code = ${code}, 
         expires_at = ${expiresAt.toISOString()}, 
         attempts = 0,
+        user_data = ${userData ? JSON.stringify(userData) : null},
         created_at = CURRENT_TIMESTAMP
     `;
     
@@ -202,7 +203,11 @@ export const verificationDb = {
       SELECT * FROM email_verification 
       WHERE email = ${email} AND verification_code = ${code} AND expires_at > NOW()
     `;
-    return result[0] || null;
+    const verification = result[0] || null;
+    if (verification && verification.user_data) {
+      verification.user_data = JSON.parse(verification.user_data);
+    }
+    return verification;
   },
 
   // Increment attempts

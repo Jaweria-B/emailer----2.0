@@ -29,11 +29,25 @@ export async function POST(request) {
       }, { status: 429 });
     }
 
+    // Create user from verification data
+    const userData = verification.user_data;
+    if (!userData || !userData.name || !userData.email) {
+      return NextResponse.json({ error: 'User data not found in verification record' }, { status: 400 });
+    }
+
+    const newUser = await userDb.create({
+      name: userData.name,
+      email: userData.email,
+      company: userData.company,
+      job_title: userData.job_title
+    });
+
     // Verify user email
     const user = await userDb.verifyEmail(email);
-    
+
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      // This should ideally not happen if the user was just created
+      return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 });
     }
 
     // Clean up verification record

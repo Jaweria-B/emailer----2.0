@@ -43,10 +43,13 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
     const [showSenderFeedback, setShowSenderFeedback] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
     const [hasFreeEmail, setHasFreeEmail] = useState(true);
+    const [isCheckingFreeEmail, setIsCheckingFreeEmail] = useState(true);
 
+    // Check free email status on mount and when user changes
     useEffect(() => {
         const checkFreeEmail = async () => {
             if (!user) {
+                setIsCheckingFreeEmail(true);
                 try {
                     const response = await fetch('/api/check-free-email');
                     if (response.ok) {
@@ -55,7 +58,11 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                     }
                 } catch (error) {
                     console.error('Failed to check free email status:', error);
+                } finally {
+                    setIsCheckingFreeEmail(false);
                 }
+            } else {
+                setIsCheckingFreeEmail(false);
             }
         };
 
@@ -138,6 +145,9 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             if (!response.ok) {
                 const errorData = await response.json();
                 if (response.status === 403) {
+                    // Update the free email status immediately
+                    setHasFreeEmail(false);
+                    
                     if (confirm(errorData.error + ' Would you like to sign in now?')) {
                         router.push('/login');
                     }
@@ -149,6 +159,11 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
 
             const result = await response.json();
             setGeneratedEmail(result);
+            
+            // If user is not logged in, they just used their free email
+            if (!user) {
+                setHasFreeEmail(false);
+            }
             
             // Save activity to database only for authenticated users
             if (user) {
@@ -276,38 +291,40 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                     </h2>
                     
                     <div className="space-y-6">
-                        {/* AI Provider Selection */}
-                        {/* <ProviderSelector
-                            selectedProvider={selectedProvider}
-                            onProviderChange={handleProviderChange}
-                        /> */}
-
-                        {/* Free Trial Status Banner */}
-                        {!user && hasFreeEmail && (
-                            <div className="rounded-xl p-4 border bg-green-500/20 border-green-400/30 text-green-200">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4" />
-                                    <span className="font-semibold">
-                                        Free email generation available
-                                    </span>
+                        {/* Free Trial Status Banner - Only show for non-authenticated users */}
+                        {!user && !isCheckingFreeEmail && (
+                            hasFreeEmail ? (
+                                <div className="rounded-xl p-4 border bg-green-500/20 border-green-400/30 text-green-200">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="h-4 w-4" />
+                                        <span className="font-semibold">
+                                            Free email generation available
+                                        </span>
+                                    </div>
+                                    <p className="text-sm mt-1">
+                                        Try our AI email generator - no sign up required!
+                                    </p>
                                 </div>
-                                <p className="text-sm mt-1">
-                                    Try our AI email generator - no sign up required!
-                                </p>
-                            </div>
-                        )}
-                         {!user && !hasFreeEmail && (
-                            <div className="rounded-xl p-4 border bg-red-500/20 border-red-400/30 text-red-200">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4" />
-                                    <span className="font-semibold">
-                                        Free email limit reached
-                                    </span>
+                            ) : (
+                                <div className="rounded-xl p-4 border bg-red-500/20 border-red-400/30 text-red-200">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-4 w-4" />
+                                        <span className="font-semibold">
+                                            Free email limit reached
+                                        </span>
+                                    </div>
+                                    <p className="text-sm mt-1">
+                                        Please{' '}
+                                        <button
+                                            onClick={() => router.push('/login')}
+                                            className="underline font-semibold hover:text-red-100"
+                                        >
+                                            sign in
+                                        </button>
+                                        {' '}to continue generating emails.
+                                    </p>
                                 </div>
-                                <p className="text-sm mt-1">
-                                    Please sign in to continue generating emails.
-                                </p>
-                            </div>
+                            )
                         )}
 
                         {/* Raw Thoughts */}
@@ -321,6 +338,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 placeholder="e.g., Need to follow up on the project deadline, want to sound professional but not pushy..."
                                 rows={4}
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -336,6 +354,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 onChange={(e) => handleInputChange('recipient', e.target.value)}
                                 placeholder="e.g., John Smith, Sarah from Marketing"
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -350,6 +369,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 onChange={(e) => handleInputChange('subject', e.target.value)}
                                 placeholder="e.g., Project update, Meeting request, Follow-up"
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -365,6 +385,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 onChange={(e) => handleInputChange('senderName', e.target.value)}
                                 placeholder="e.g., John Doe, Sarah Johnson"
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -380,11 +401,12 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                         <button
                                             key={tone.value}
                                             onClick={() => handleInputChange('tone', tone.value)}
+                                            disabled={!user && !hasFreeEmail}
                                             className={`p-3 rounded-xl border transition-all duration-300 flex items-center gap-2 ${
                                                 formData.tone === tone.value
                                                     ? 'bg-purple-500/50 border-purple-300 text-white'
                                                     : 'bg-white/10 border-white/20 text-purple-100 hover:bg-white/20'
-                                            }`}
+                                            } ${(!user && !hasFreeEmail) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <IconComponent className="h-4 w-4" />
                                             <span className="text-sm font-medium">{tone.label}</span>
@@ -403,6 +425,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 value={formData.relationship}
                                 onChange={(e) => handleInputChange('relationship', e.target.value)}
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                disabled={!user && !hasFreeEmail}
                             >
                                 {relationships.map((rel) => (
                                     <option key={rel.value} value={rel.value} className="bg-purple-800">
@@ -421,6 +444,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 value={formData.purpose}
                                 onChange={(e) => handleInputChange('purpose', e.target.value)}
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                disabled={!user && !hasFreeEmail}
                             >
                                 {purposes.map((purpose) => (
                                     <option key={purpose.value} value={purpose.value} className="bg-purple-800">
@@ -440,6 +464,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                     value={formData.priority}
                                     onChange={(e) => handleInputChange('priority', e.target.value)}
                                     className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                    disabled={!user && !hasFreeEmail}
                                 >
                                     {priorities.map((priority) => (
                                         <option key={priority.value} value={priority.value} className="bg-purple-800">
@@ -456,6 +481,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                     value={formData.length}
                                     onChange={(e) => handleInputChange('length', e.target.value)}
                                     className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                                    disabled={!user && !hasFreeEmail}
                                 >
                                     {lengths.map((length) => (
                                         <option key={length.value} value={length.value} className="bg-purple-800">
@@ -477,6 +503,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 placeholder="Any additional context, background information, or specific requirements..."
                                 rows={3}
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -491,6 +518,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 placeholder="Paste the email you're replying to here..."
                                 rows={4}
                                 className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none"
+                                disabled={!user && !hasFreeEmail}
                             />
                         </div>
 
@@ -510,15 +538,37 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                     <Sparkles className="h-5 w-5" />
                                     {user
                                         ? `Generate Email with ${AI_PROVIDER_INFO[selectedProvider].name}`
-                                        : `Try Free Generation with ${AI_PROVIDER_INFO[selectedProvider].name}`
+                                        : hasFreeEmail
+                                        ? `Try Free Generation with ${AI_PROVIDER_INFO[selectedProvider].name}`
+                                        : 'Sign In to Generate Email'
                                     }
                                 </>
                             )}
                         </button>
+
+                        {/* Optional: Sign in prompt below button for non-authenticated users without free email */}
+                        {!user && !hasFreeEmail && (
+                            <p className="text-center text-sm text-purple-200">
+                                <button
+                                    onClick={() => router.push('/login')}
+                                    className="underline hover:text-white font-medium"
+                                >
+                                    Sign in
+                                </button>
+                                {' '}or{' '}
+                                <button
+                                    onClick={() => router.push('/signup')}
+                                    className="underline hover:text-white font-medium"
+                                >
+                                    create an account
+                                </button>
+                                {' '}to continue generating emails
+                            </p>
+                        )}
                     </div>
                 </div>
 
-                {/* Output Section - Keep the same as original */}
+                {/* Output Section */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl sm:rounded-3xl border border-white/20 p-4 sm:p-6 lg:p-8 shadow-2xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
                         <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
@@ -585,7 +635,12 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                     <Mail className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 opacity-50" />
                                     <p className="text-base sm:text-lg mb-2">Your generated email will appear here</p>
                                     <p className="text-xs sm:text-sm opacity-75 leading-relaxed">
-                                        Select an AI provider, fill in the details and click "Generate Email"
+                                        {user 
+                                            ? "Fill in the details and click 'Generate Email'"
+                                            : hasFreeEmail 
+                                            ? "Fill in the details and try your free generation"
+                                            : "Sign in to generate professional emails"
+                                        }
                                     </p>
                                 </div>
                             </div>

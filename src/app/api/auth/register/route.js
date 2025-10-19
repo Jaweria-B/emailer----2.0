@@ -29,12 +29,9 @@ export async function POST(request) {
       }
     }
 
-    // Create unverified user
-    const result = await userDb.create({ name, email, company, job_title });
-    
     // Generate and send verification code
     const verificationCode = generateVerificationCode();
-    await verificationDb.create(email, verificationCode);
+    await verificationDb.create(email, verificationCode, { name, email, company, job_title });
     
     const emailResult = await sendVerificationEmail(email, verificationCode, name);
     
@@ -61,7 +58,8 @@ export async function POST(request) {
 async function handleResendVerification(email, name) {
   try {
     const verificationCode = generateVerificationCode();
-    await verificationDb.create(email, verificationCode);
+    // Pass user data to the create function
+    await verificationDb.create(email, verificationCode, { name, email });
     
     const emailResult = await sendVerificationEmail(email, verificationCode, name);
     

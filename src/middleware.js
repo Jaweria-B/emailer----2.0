@@ -1,6 +1,7 @@
+// src/middleware.js
 import { NextResponse } from 'next/server';
 
-export function middleware(request) {
+export async function middleware(request) {
   const response = NextResponse.next();
 
   // Get session token from cookie
@@ -11,22 +12,41 @@ export function middleware(request) {
   const authRoutes = ['/login', '/register'];
 
   const pathname = request.nextUrl.pathname;
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
-  const isProtectedRoute = protectedRoutes.some(route =>
-    pathname.startsWith(route)
-  );
+  // Validate session token by calling an internal API route (Node runtime)
+  let isValidSession = false;
+  if (sessionToken) {
+    try {
+      const url = new URL('/api/auth/validate-session', request.url).toString();
+      const validateRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        // pass token in body (or let API read cookie if you forward it)
+        body: JSON.stringify({ sessionToken }),
+      });
 
-  const isAuthRoute = authRoutes.some(route =>
-    pathname.startsWith(route)
-  );
-
-  // If accessing protected route without session, redirect to login
-  if (isProtectedRoute && !sessionToken) {
-    return NextResponse.redirect(new URL('/login', request.url));
+      if (validateRes.ok) {
+        const payload = await validateRes.json();
+        isValidSession = !!payload.valid;
+      } else {
+        // treat non-2xx as invalid
+        response.cookies.delete('session_token');
+      }
+    } catch (err) {
+      console.error('Session validation fetch error:', err);
+      response.cookies.delete('session_token');
+    }
   }
 
-  // If accessing auth route with valid session, redirect to home page
-  if (isAuthRoute && sessionToken) {
+  // Redirect logic (same as before)
+  if (isProtectedRoute && !isValidSession) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+  if (isAuthRoute && isValidSession) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -34,14 +54,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

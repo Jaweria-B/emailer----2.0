@@ -3,8 +3,10 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { Mail, Shield, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthContext } from '@/providers/AuthProvider';
 
 const VerifyEmailContent = () => {
+  const { refreshUser } = useAuthContext();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -70,6 +72,7 @@ const VerifyEmailContent = () => {
 
       if (response.ok) {
         setMessage('Email verified successfully! Redirecting...');
+        await refreshUser();
         setTimeout(() => {
           router.push('/dashboard');
         }, 1500);

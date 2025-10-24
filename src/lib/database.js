@@ -157,12 +157,14 @@ export const anonymousDevicesDb = {
 // -----------------------
 export const userDb = {
   create: async (userData) => {
+    const uinfoKey = await generateUUID(); 
+    
     const result = await sql`
-      INSERT INTO users (name, email, company, job_title, password_hash, email_verified, status)
-      VALUES (${userData.name}, ${userData.email}, ${userData.company}, ${userData.job_title}, ${userData.password_hash || null}, FALSE, 'pending')
-      RETURNING id
+      INSERT INTO users (name, email, company, job_title, password_hash, email_verified, status, uinfo_key)
+      VALUES (${userData.name}, ${userData.email}, ${userData.company}, ${userData.job_title}, ${userData.password_hash || null}, FALSE, 'pending', ${uinfoKey})
+      RETURNING id, uinfo_key
     `;
-    return { lastInsertRowid: result[0].id };
+    return { lastInsertRowid: result[0].id, uinfo_key: result[0].uinfo_key };
   },
 
   findByEmail: async (email) => {

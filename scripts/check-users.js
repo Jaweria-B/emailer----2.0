@@ -24,6 +24,7 @@ async function checkUsers() {
         '✅ HAS PASSWORD';
 
       console.log(`ID: ${user.id} | ${user.email}`);
+      console.log(`  Uinfo Key: ${user.uinfo_key ? user.uinfo_key : "Doesn't Exists"}`);
       console.log(`  Name: ${user.name || 'N/A'}`);
       console.log(`  Password: ${passwordStatus}`);
       console.log(`  Hash length: ${user.password_hash ? user.password_hash.length : 0}`);

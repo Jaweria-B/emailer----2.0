@@ -12,7 +12,7 @@ async function checkUsers() {
     console.log('🔍 Checking all users...\n');
 
     // Get all users
-    const allUsers = await sql`SELECT id, email, name, password_hash FROM users ORDER BY id`;
+    const allUsers = await sql`SELECT id, email, name, password_hash, uinfo_key FROM users ORDER BY id`;
 
     console.log(`Total users: ${allUsers.length}\n`);
 

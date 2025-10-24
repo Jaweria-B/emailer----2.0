@@ -2,14 +2,24 @@
 import { NextResponse } from 'next/server';
 import { userDb, verificationDb } from '@/lib/database';
 import { sendVerificationEmail, generateVerificationCode } from '@/lib/email-verification-service';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
   try {
     const userData = await request.json();
-    const { name, email, company, job_title } = userData;
+    const { name, email, company, job_title, password, confirm_password } = userData;
     
-    if (!name || !email) {
-      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    if (!name || !email || !password || !confirm_password) {
+      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
+    }
+
+    if (password !== confirm_password) {
+      return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
+    }
+
+    // minimal password rules (adjust as needed)
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
 
     // Validate email format
@@ -29,12 +39,16 @@ export async function POST(request) {
       }
     }
 
+    // Hash password and store hash in verification record
+    const password_hash = bcrypt.hashSync(password, 10);
+
     // Generate and send verification code
     const verificationCode = generateVerificationCode();
-    await verificationDb.create(email, verificationCode, { name, email, company, job_title });
+    await verificationDb.create(email, verificationCode, { name, email, company, job_title, password_hash });
     
-    const emailResult = await sendVerificationEmail(email, verificationCode, name);
-    
+    // pass user data (including password_hash) to email helper so it can include contextual info if needed
+    const emailResult = await sendVerificationEmail(email, verificationCode, name, { name, email, company, job_title });
+
     if (!emailResult.success) {
       console.error('Failed to send verification email:', emailResult.error);
       return NextResponse.json({ 

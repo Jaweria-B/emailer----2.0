@@ -11,6 +11,8 @@ const Register = () => {
     company: '',
     job_title: ''
   });
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -25,10 +27,11 @@ const Register = () => {
     setError('');
 
     try {
+      const body = { ...formData, password, confirm_password: confirmPassword };
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -125,6 +128,36 @@ const Register = () => {
               value={formData.job_title}
               onChange={(e) => handleInputChange('job_title', e.target.value)}
               placeholder="Your job title"
+              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-purple-100 text-sm font-medium mb-2">
+              <User className="h-4 w-4 inline mr-2" />
+              Password *
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter a secure password"
+              required
+              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-purple-100 text-sm font-medium mb-2">
+              <User className="h-4 w-4 inline mr-2" />
+              Confirm Password *
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              required
               className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
             />
           </div>

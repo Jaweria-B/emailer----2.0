@@ -1,13 +1,14 @@
 // app/api/auth/login/route.js
 import { NextResponse } from 'next/server';
 import { userDb, sessionDb } from '@/lib/database';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
   try {
-    const { email } = await request.json();
+    const { email, password } = await request.json();
     
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
     // Find user (now async)
@@ -15,6 +16,16 @@ export async function POST(request) {
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // ensure user has password_hash and verify
+    if (!user.password_hash) {
+      return NextResponse.json({ error: 'Account does not have a password set' }, { status: 403 });
+    }
+    
+    const valid = bcrypt.compareSync(password, user.password_hash);
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
     // Create session (now async)

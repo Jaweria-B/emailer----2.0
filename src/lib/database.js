@@ -30,7 +30,10 @@ async function generateUUID() {
 // Initialize database tables
 const initializeSchema = async () => {
   try {
-    // Create users table with email_verified field
+    // ensure old plaintext column removed (safe to run repeatedly)
+    await sql`ALTER TABLE users DROP COLUMN IF EXISTS password`;
+
+    // Create users table with email_verified field and password_hash
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -38,6 +41,7 @@ const initializeSchema = async () => {
         email TEXT UNIQUE NOT NULL,
         company TEXT,
         job_title TEXT,
+        password_hash TEXT,
         email_verified BOOLEAN DEFAULT FALSE,
         status TEXT DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -157,8 +161,8 @@ export const anonymousDevicesDb = {
 export const userDb = {
   create: async (userData) => {
     const result = await sql`
-      INSERT INTO users (name, email, company, job_title, email_verified, status)
-      VALUES (${userData.name}, ${userData.email}, ${userData.company}, ${userData.job_title}, FALSE, 'pending')
+      INSERT INTO users (name, email, company, job_title, password_hash, email_verified, status)
+      VALUES (${userData.name}, ${userData.email}, ${userData.company}, ${userData.job_title}, ${userData.password_hash || null}, FALSE, 'pending')
       RETURNING id
     `;
     return { lastInsertRowid: result[0].id };

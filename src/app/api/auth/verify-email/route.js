@@ -35,11 +35,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User data not found in verification record' }, { status: 400 });
     }
 
+    // include password_hash if present in verification.user_data
     const newUser = await userDb.create({
       name: userData.name,
       email: userData.email,
       company: userData.company,
-      job_title: userData.job_title
+      job_title: userData.job_title,
+      password_hash: userData.password_hash || null
     });
 
     // Verify user email
@@ -62,7 +64,7 @@ export async function POST(request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 30 * 24 * 60 * 60 // 30 days (seconds)
     });
 
     return NextResponse.json({ 

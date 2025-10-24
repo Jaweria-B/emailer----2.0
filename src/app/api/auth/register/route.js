@@ -4,6 +4,43 @@ import { userDb, verificationDb } from '@/lib/database';
 import { sendVerificationEmail, generateVerificationCode } from '@/lib/email-verification-service';
 import bcrypt from 'bcryptjs';
 
+// Password validation function
+function validatePassword(password) {
+  const errors = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (password.length > 128) {
+    errors.push('Password must not exceed 128 characters');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character (!@#$%^&*()_+-=[]{};\':"|,.<>?/)');
+  }
+  
+  // Check for common weak passwords
+  const commonPasswords = ['password', '12345678', 'qwerty123', 'abc123'];
+  if (commonPasswords.some(common => password.toLowerCase().includes(common))) {
+    errors.push('Password is too common. Please choose a stronger password');
+  }
+  
+  return errors;
+}
+
 export async function POST(request) {
   try {
     const userData = await request.json();
@@ -17,9 +54,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
     }
 
-    // minimal password rules (adjust as needed)
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    // Validate password strength
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return NextResponse.json({ 
+        error: 'Password does not meet requirements',
+        details: passwordErrors 
+      }, { status: 400 });
     }
 
     // Validate email format

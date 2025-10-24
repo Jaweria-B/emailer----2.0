@@ -1,7 +1,4 @@
 // lib/database.js
-// Edge-safe database helper for Neon + Postgres
-// No top-level `crypto` import so this file can be imported from Edge contexts without crashing.
-
 import { neon } from '@neondatabase/serverless';
 
 // Initialize connection

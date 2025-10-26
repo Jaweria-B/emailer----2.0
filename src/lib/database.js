@@ -660,3 +660,278 @@ export const emailTemplateDb = {
 
 // Export the schema initializer for manual use
 export { initializeSchema, initializeBulkEmailSchema };
+
+// Add these functions to your existing database.js file
+
+// -----------------------
+// Subscription Plans operations
+// -----------------------
+export const subscriptionPlansDb = {
+  getAll: async () => {
+    const result = await sql`SELECT * FROM subscription_plans WHERE is_active = TRUE ORDER BY price ASC`;
+    return result;
+  },
+
+  getById: async (planId) => {
+    const result = await sql`SELECT * FROM subscription_plans WHERE id = ${planId}`;
+    return result[0] || null;
+  },
+
+  getByName: async (planName) => {
+    const result = await sql`SELECT * FROM subscription_plans WHERE name = ${planName} AND is_active = TRUE`;
+    return result[0] || null;
+  }
+};
+
+// -----------------------
+// User Subscriptions operations
+// -----------------------
+export const userSubscriptionsDb = {
+  create: async (userId, planId, periodStart = null, periodEnd = null) => {
+    const start = periodStart || new Date();
+    const end = periodEnd || new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from start
+
+    const result = await sql`
+      INSERT INTO user_subscriptions 
+      (user_id, plan_id, status, current_period_start, current_period_end)
+      VALUES (${userId}, ${planId}, 'active', ${start.toISOString()}, ${end.toISOString()})
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        plan_id = ${planId},
+        status = 'active',
+        current_period_start = ${start.toISOString()},
+        current_period_end = ${end.toISOString()},
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+    
+    return result[0];
+  },
+
+  getCurrent: async (userId) => {
+    const result = await sql`
+      SELECT 
+        us.*,
+        sp.name as plan_name,
+        sp.price,
+        sp.billing_cycle,
+        sp.simple_email_limit,
+        sp.personalized_email_limit,
+        sp.has_branding
+      FROM user_subscriptions us
+      JOIN subscription_plans sp ON us.plan_id = sp.id
+      WHERE us.user_id = ${userId} AND us.status = 'active'
+      LIMIT 1
+    `;
+    return result[0] || null;
+  },
+
+  updateStatus: async (userId, status) => {
+    const result = await sql`
+      UPDATE user_subscriptions
+      SET status = ${status}, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+      RETURNING *
+    `;
+    return result[0] || null;
+  },
+
+  cancel: async (userId) => {
+    const result = await sql`
+      UPDATE user_subscriptions
+      SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+      RETURNING *
+    `;
+    return result[0] || null;
+  }
+};
+
+// -----------------------
+// Email Usage operations
+// -----------------------
+export const emailUsageDb = {
+  getCurrent: async (userId) => {
+    const result = await sql`
+      SELECT * FROM email_usage
+      WHERE user_id = ${userId} 
+        AND period_start <= NOW() 
+        AND period_end >= NOW()
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    return result[0] || null;
+  },
+
+  create: async (userId, subscriptionId, periodStart, periodEnd) => {
+    const result = await sql`
+      INSERT INTO email_usage 
+      (user_id, subscription_id, simple_emails_used, personalized_emails_used, period_start, period_end)
+      VALUES (${userId}, ${subscriptionId}, 0, 0, ${periodStart.toISOString()}, ${periodEnd.toISOString()})
+      RETURNING *
+    `;
+    return result[0];
+  },
+
+  incrementSimple: async (userId) => {
+    const usage = await emailUsageDb.getCurrent(userId);
+    if (!usage) {
+      throw new Error('No active usage record found');
+    }
+
+    const result = await sql`
+      UPDATE email_usage
+      SET simple_emails_used = simple_emails_used + 1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${usage.id}
+      RETURNING *
+    `;
+    return result[0];
+  },
+
+  incrementPersonalized: async (userId, count = 1) => {
+    const usage = await emailUsageDb.getCurrent(userId);
+    if (!usage) {
+      throw new Error('No active usage record found');
+    }
+
+    const result = await sql`
+      UPDATE email_usage
+      SET personalized_emails_used = personalized_emails_used + ${count}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${usage.id}
+      RETURNING *
+    `;
+    return result[0];
+  },
+
+  getStats: async (userId) => {
+    const subscription = await userSubscriptionsDb.getCurrent(userId);
+    if (!subscription) {
+      return null;
+    }
+
+    const usage = await emailUsageDb.getCurrent(userId);
+    if (!usage) {
+      return {
+        simple_emails_used: 0,
+        simple_emails_limit: subscription.simple_email_limit,
+        simple_emails_remaining: subscription.simple_email_limit,
+        personalized_emails_used: 0,
+        personalized_emails_limit: subscription.personalized_email_limit,
+        personalized_emails_remaining: subscription.personalized_email_limit,
+        period_end: subscription.current_period_end,
+        has_branding: subscription.has_branding
+      };
+    }
+
+    return {
+      simple_emails_used: usage.simple_emails_used,
+      simple_emails_limit: subscription.simple_email_limit,
+      simple_emails_remaining: Math.max(0, subscription.simple_email_limit - usage.simple_emails_used),
+      personalized_emails_used: usage.personalized_emails_used,
+      personalized_emails_limit: subscription.personalized_email_limit,
+      personalized_emails_remaining: Math.max(0, subscription.personalized_email_limit - usage.personalized_emails_used),
+      period_end: subscription.current_period_end,
+      has_branding: subscription.has_branding,
+      plan_name: subscription.plan_name,
+      price: subscription.price
+    };
+  }
+};
+
+// -----------------------
+// Helper function to check if user can generate email
+// -----------------------
+export const checkEmailLimit = async (userId, emailType = 'simple') => {
+  const subscription = await userSubscriptionsDb.getCurrent(userId);
+  
+  if (!subscription) {
+    return {
+      allowed: false,
+      reason: 'No active subscription found',
+      remaining: 0,
+      limit: 0
+    };
+  }
+
+  const usage = await emailUsageDb.getCurrent(userId);
+  
+  // If no usage record exists for current period, create one
+  if (!usage) {
+    await emailUsageDb.create(
+      userId,
+      subscription.id,
+      new Date(subscription.current_period_start),
+      new Date(subscription.current_period_end)
+    );
+    
+    // Return allowed since we just created fresh usage
+    return {
+      allowed: true,
+      remaining: emailType === 'simple' 
+        ? subscription.simple_email_limit 
+        : subscription.personalized_email_limit,
+      limit: emailType === 'simple' 
+        ? subscription.simple_email_limit 
+        : subscription.personalized_email_limit,
+      has_branding: subscription.has_branding
+    };
+  }
+
+  // Check limits
+  if (emailType === 'simple') {
+    const remaining = subscription.simple_email_limit - usage.simple_emails_used;
+    return {
+      allowed: remaining > 0,
+      remaining: Math.max(0, remaining),
+      limit: subscription.simple_email_limit,
+      has_branding: subscription.has_branding,
+      reason: remaining <= 0 ? 'Simple email limit reached' : null
+    };
+  } else if (emailType === 'personalized') {
+    const remaining = subscription.personalized_email_limit - usage.personalized_emails_used;
+    return {
+      allowed: remaining > 0,
+      remaining: Math.max(0, remaining),
+      limit: subscription.personalized_email_limit,
+      has_branding: subscription.has_branding,
+      reason: remaining <= 0 ? 'Personalized email limit reached' : null
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: 'Invalid email type',
+    remaining: 0,
+    limit: 0
+  };
+};
+
+// -----------------------
+// Helper to create default Free subscription for new users
+// -----------------------
+export const createDefaultSubscription = async (userId) => {
+  try {
+    // Get the Free plan
+    const freePlan = await subscriptionPlansDb.getByName('Free');
+    
+    if (!freePlan) {
+      throw new Error('Free plan not found in database');
+    }
+
+    // Create subscription
+    const subscription = await userSubscriptionsDb.create(userId, freePlan.id);
+
+    // Create initial usage record
+    await emailUsageDb.create(
+      userId,
+      subscription.id,
+      new Date(subscription.current_period_start),
+      new Date(subscription.current_period_end)
+    );
+
+    return subscription;
+  } catch (error) {
+    console.error('Error creating default subscription:', error);
+    throw error;
+  }
+};

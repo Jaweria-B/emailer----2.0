@@ -10,10 +10,16 @@ import EmailGenerationFeedback from '@/components/EmailGenerationFeedback';
 import EmailSenderFeedback from '@/components/EmailSenderFeedback';
 import FloatingGenerationGuide from '@/components/GenerationGuide';
 import EmailOpener from '@/components/EmailOpener';
+import UsageWidget from '@/components/UsageWidget';
+import UpgradeModal from '@/components/UpgradeModal';
 import { useRouter } from 'next/navigation';
 
 const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
     const router = useRouter();
+    const [subscriptionData, setSubscriptionData] = useState(null);
+    const [usageData, setUsageData] = useState(null);
+    const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     
     const [formData, setFormData] = useState({
         rawThoughts: '',
@@ -47,6 +53,9 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
 
     // Check free email status on mount and when user changes
     useEffect(() => {
+        if (user) {
+            fetchSubscriptionData();
+        }
         const checkFreeEmail = async () => {
             if (!user) {
                 setIsCheckingFreeEmail(true);
@@ -110,6 +119,24 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
         { value: 'long', label: 'Long (5+ paragraphs)' }
     ];
 
+    const fetchSubscriptionData = async () => {
+    if (!user) return;
+    
+    setIsLoadingSubscription(true);
+    try {
+        const response = await fetch('/api/subscriptions/current');
+        if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data.subscription);
+        setUsageData(data.usage);
+        }
+    } catch (error) {
+        console.error('Failed to fetch subscription data:', error);
+    } finally {
+        setIsLoadingSubscription(false);
+    }
+    };
+
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
@@ -132,29 +159,35 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
         try {
             const prompt = createPrompt(formData);
             const response = await fetch('/api/generate-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    provider: selectedProvider,
-                    prompt: prompt
-                })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                provider: selectedProvider,
+                prompt: prompt
+            })
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                if (response.status === 403) {
-                    // Update the free email status immediately
-                    setHasFreeEmail(false);
-                    
-                    if (confirm(errorData.error + ' Would you like to sign in now?')) {
-                        router.push('/login');
-                    }
-                } else {
-                    throw new Error(errorData.error || 'Failed to generate email');
-                }
+            const errorData = await response.json();
+            if (response.status === 403) {
+                // Check if it's a subscription limit issue
+                if (errorData.upgrade_required) {
+                setShowUpgradeModal(true);
                 return;
+                }
+                
+                // Handle anonymous user (free email used)
+                setHasFreeEmail(false);
+                
+                if (confirm(errorData.error + ' Would you like to sign in now?')) {
+                router.push('/login');
+                }
+            } else {
+                throw new Error(errorData.error || 'Failed to generate email');
+            }
+            return;
             }
 
             const result = await response.json();
@@ -162,16 +195,19 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             
             // If user is not logged in, they just used their free email
             if (!user) {
-                setHasFreeEmail(false);
+            setHasFreeEmail(false);
+            } else {
+            // Refresh subscription data to show updated usage
+            await fetchSubscriptionData();
             }
             
             // Save activity to database only for authenticated users
             if (user) {
-                await saveEmailActivity(result);
+            await saveEmailActivity(result);
             }
             
             setTimeout(() => {
-                setShowGenerationFeedback(true);
+            setShowGenerationFeedback(true);
             }, 1500);
         } catch (error) {
             console.error('Error generating email:', error);
@@ -179,7 +215,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
         } finally {
             setIsLoading(false);
         }
-    };
+        };
 
     const copyToClipboard = async () => {
         try {
@@ -282,6 +318,15 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
 
     return (
         <div>
+            {user && usageData && subscriptionData && (
+            <div className="mb-8">
+                <UsageWidget 
+                usage={usageData}
+                subscription={subscriptionData}
+                onUpgradeClick={() => router.push('/pricing')}
+                />
+            </div>
+            )}
             <div className="grid lg:grid-cols-2 gap-12">
                 {/* Input Section */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
@@ -669,6 +714,14 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                 />
             )}
             <FloatingGenerationGuide />
+            {/* Upgrade Modal */}
+            {showUpgradeModal && (
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                limitType="simple"
+            />
+            )}
         </div>
     )
 };

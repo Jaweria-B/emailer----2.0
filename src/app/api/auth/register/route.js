@@ -1,6 +1,6 @@
 // app/api/auth/register/route.js
 import { NextResponse } from 'next/server';
-import { userDb, verificationDb } from '@/lib/database';
+import { userDb, verificationDb, createDefaultSubscription } from '@/lib/database';
 import { sendVerificationEmail, generateVerificationCode } from '@/lib/email-verification-service';
 import bcrypt from 'bcryptjs';
 
@@ -87,7 +87,7 @@ export async function POST(request) {
     const verificationCode = generateVerificationCode();
     await verificationDb.create(email, verificationCode, { name, email, company, job_title, password_hash });
     
-    // pass user data (including password_hash) to email helper so it can include contextual info if needed
+    // Send verification email
     const emailResult = await sendVerificationEmail(email, verificationCode, name, { name, email, company, job_title });
 
     if (!emailResult.success) {
@@ -97,8 +97,13 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    // 🆕 NOTE: Subscription will be created AFTER email verification
+    // We don't create the subscription here because the user hasn't been created yet
+    // The subscription will be created in the verify-email route after user is created
+    // (See updated verify-email route)
+
+    return NextResponse.json({
+      success: true,
       message: 'Registration initiated. Please check your email for verification code.',
       email: email
     });
@@ -124,8 +129,8 @@ async function handleResendVerification(email, name) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Verification code sent. Please check your email.',
       email: email
     });

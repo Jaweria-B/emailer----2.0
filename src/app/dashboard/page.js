@@ -1,12 +1,17 @@
 "use client"
 import React, { useState, useEffect, useCallback } from 'react';
-import { Mail, User, Calendar, TrendingUp, Activity, Send, Eye, LogOut, MessageSquare } from 'lucide-react';
+import { 
+  Mail, User, Calendar, Activity, LogOut, MessageSquare, 
+  TrendingUp, Zap, AlertTriangle, Crown, ArrowRight, CheckCircle2 
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/providers/AuthProvider';
 
 const Dashboard = () => {
   const { user, isLoadingUser, handleLogout: contextLogout } = useAuthContext();
   const [emailHistory, setEmailHistory] = useState([]);
+  const [subscriptionData, setSubscriptionData] = useState(null);
+  const [usageData, setUsageData] = useState(null);
   const [stats, setStats] = useState({
     totalEmails: 0,
     emailsThisMonth: 0,
@@ -25,7 +30,6 @@ const Dashboard = () => {
       return emailDate.getMonth() === currentMonth && emailDate.getFullYear() === currentYear;
     }).length;
 
-    // Find most used provider
     const providerCount = {};
     const toneCount = {};
     
@@ -60,10 +64,21 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Failed to load email history:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, [calculateStats]);
+
+  const loadSubscriptionData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/subscriptions/current');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data.subscription);
+        setUsageData(data.usage);
+      }
+    } catch (error) {
+      console.error('Failed to load subscription data:', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoadingUser && !user) {
@@ -73,9 +88,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      loadEmailHistory();
+      Promise.all([loadEmailHistory(), loadSubscriptionData()])
+        .finally(() => setIsLoading(false));
     }
-  }, [user, loadEmailHistory]);
+  }, [user, loadEmailHistory, loadSubscriptionData]);
 
   const handleLogout = async () => {
     await contextLogout();
@@ -91,6 +107,17 @@ const Dashboard = () => {
     });
   };
 
+  const getUsagePercentage = (used, limit) => {
+    if (limit === 0) return 0;
+    return Math.round((used / limit) * 100);
+  };
+
+  const shouldShowWarning = (remaining, limit) => {
+    if (limit === 0) return false;
+    const percentage = (remaining / limit) * 100;
+    return percentage <= 20 || remaining <= 5;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
@@ -101,6 +128,11 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  const simplePercentage = usageData ? getUsagePercentage(usageData.simple_emails_used, usageData.simple_emails_limit) : 0;
+  const personalizedPercentage = usageData ? getUsagePercentage(usageData.personalized_emails_used, usageData.personalized_emails_limit) : 0;
+  const showSimpleWarning = usageData ? shouldShowWarning(usageData.simple_emails_remaining, usageData.simple_emails_limit) : false;
+  const showPersonalizedWarning = usageData ? shouldShowWarning(usageData.personalized_emails_remaining, usageData.personalized_emails_limit) : false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800">
@@ -134,18 +166,103 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Warning Banners */}
+        {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
+          <div className="mb-6 space-y-3">
+            {showSimpleWarning && usageData.simple_emails_remaining > 0 && (
+              <div className="bg-yellow-500/20 backdrop-blur-lg border border-yellow-500/40 rounded-xl p-4 flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-yellow-100 font-medium">
+                    Running low on simple emails! Only {usageData.simple_emails_remaining} remaining this month.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap"
+                >
+                  Upgrade Now
+                </button>
+              </div>
+            )}
+            
+            {usageData && usageData.simple_emails_remaining === 0 && (
+              <div className="bg-red-500/20 backdrop-blur-lg border border-red-500/40 rounded-xl p-4 flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-300 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-red-100 font-medium">
+                    You've reached your simple email limit for this month!
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap"
+                >
+                  Upgrade Now
+                </button>
+              </div>
+            )}
+
+            {usageData && usageData.personalized_emails_limit === 0 && subscriptionData?.plan_name === 'Free' && (
+              <div className="bg-blue-500/20 backdrop-blur-lg border border-blue-500/40 rounded-xl p-4 flex items-center gap-3">
+                <Crown className="h-5 w-5 text-blue-300 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-blue-100 font-medium">
+                    Upgrade to Pro to unlock 100 personalized emails per month!
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                >
+                  <Crown className="h-4 w-4" />
+                  Go Pro
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Simple Emails Card */}
           <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
             <div className="flex items-center gap-3 mb-2">
-              <Mail className="h-8 w-8 text-purple-300" />
+              <Mail className="h-8 w-8 text-blue-300" />
               <div>
-                <p className="text-purple-200 text-sm">Total Emails</p>
-                <p className="text-white text-2xl font-bold">{stats.totalEmails}</p>
+                <p className="text-purple-200 text-sm">Simple Emails</p>
+                <p className="text-white text-2xl font-bold">
+                  {usageData ? `${usageData.simple_emails_used}/${usageData.simple_emails_limit}` : '0/0'}
+                </p>
               </div>
             </div>
           </div>
 
+          {/* Personalized Emails Card */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Zap className="h-8 w-8 text-yellow-300" />
+              <div>
+                <p className="text-purple-200 text-sm">Personalized</p>
+                <p className="text-white text-2xl font-bold">
+                  {usageData ? `${usageData.personalized_emails_used}/${usageData.personalized_emails_limit}` : '0/0'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Plan Card */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Crown className="h-8 w-8 text-purple-300" />
+              <div>
+                <p className="text-purple-200 text-sm">Current Plan</p>
+                <p className="text-white text-2xl font-bold">{subscriptionData?.plan_name || 'Free'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* This Month Card */}
           <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="h-8 w-8 text-green-300" />
@@ -155,24 +272,99 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="h-8 w-8 text-blue-300" />
-              <div>
-                <p className="text-purple-200 text-sm">Provider</p>
-                <p className="text-white text-lg font-bold capitalize">{stats.favoriteProvider || 'None'}</p>
+        {/* Subscription Overview */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <Activity className="h-6 w-6" />
+              Subscription Overview
+            </h2>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
+            >
+              View Plans
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Simple Emails Progress */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-200 font-medium">Simple Emails</span>
+                <span className="text-white font-bold">
+                  {usageData ? `${usageData.simple_emails_used} / ${usageData.simple_emails_limit}` : '0 / 0'}
+                </span>
               </div>
+              <div className="bg-white/10 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    simplePercentage >= 80 ? 'bg-red-500' : simplePercentage >= 50 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${Math.min(simplePercentage, 100)}%` }}
+                />
+              </div>
+              <p className="text-purple-300 text-sm mt-2">
+                {usageData ? `${usageData.simple_emails_remaining} remaining` : 'No limit data'}
+              </p>
+            </div>
+
+            {/* Personalized Emails Progress */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-200 font-medium">Personalized Emails</span>
+                <span className="text-white font-bold">
+                  {usageData ? `${usageData.personalized_emails_used} / ${usageData.personalized_emails_limit}` : '0 / 0'}
+                </span>
+              </div>
+              <div className="bg-white/10 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    usageData && usageData.personalized_emails_limit === 0 
+                      ? 'bg-gray-500' 
+                      : personalizedPercentage >= 80 
+                      ? 'bg-red-500' 
+                      : personalizedPercentage >= 50 
+                      ? 'bg-yellow-500' 
+                      : 'bg-green-500'
+                  }`}
+                  style={{ width: usageData && usageData.personalized_emails_limit === 0 ? '0%' : `${Math.min(personalizedPercentage, 100)}%` }}
+                />
+              </div>
+              {usageData && usageData.personalized_emails_limit === 0 ? (
+                <p className="text-purple-300 text-sm mt-2 flex items-center gap-1">
+                  <Crown className="h-3 w-3" />
+                  Upgrade to Pro to unlock
+                </p>
+              ) : (
+                <p className="text-purple-300 text-sm mt-2">
+                  {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No limit data'}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Activity className="h-8 w-8 text-yellow-300" />
+          {/* Plan Details */}
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-200 text-sm">Most Used Tone</p>
-                <p className="text-white text-lg font-bold capitalize">{stats.mostUsedTone || 'None'}</p>
+                <p className="text-purple-200 text-sm mb-1">Billing Period</p>
+                <p className="text-white font-medium">
+                  Resets on {usageData ? new Date(usageData.period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                </p>
               </div>
+              {subscriptionData?.plan_name === 'Free' && (
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2"
+                >
+                  <Crown className="h-5 w-5" />
+                  Upgrade to Pro
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -185,7 +377,7 @@ const Dashboard = () => {
           </h2>
 
           {emailHistory.length > 0 ? (
-            <div className="space-y-4 max-h-250 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               {emailHistory.map((email) => (
                 <div key={email.id} className="bg-white/10 rounded-lg p-4 border border-white/20">
                   <div className="flex items-start justify-between mb-2">

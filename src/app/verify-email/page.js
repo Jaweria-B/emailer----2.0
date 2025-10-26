@@ -1,3 +1,4 @@
+// src\app\verify-email\page.js
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import { Mail, Shield, ArrowLeft, RefreshCw } from 'lucide-react';

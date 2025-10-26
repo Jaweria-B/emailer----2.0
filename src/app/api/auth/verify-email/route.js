@@ -1,55 +1,77 @@
 // app/api/auth/verify-email/route.js
 import { NextResponse } from 'next/server';
-import { userDb, verificationDb, sessionDb } from '@/lib/database';
-import { cookies } from 'next/headers';
+import { userDb, verificationDb, sessionDb, createDefaultSubscription } from '@/lib/database';
 
 export async function POST(request) {
   try {
     const { email, code } = await request.json();
-    
+
     if (!email || !code) {
-      return NextResponse.json({ error: 'Email and verification code are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email and verification code are required' },
+        { status: 400 }
+      );
     }
 
-    // Find verification record
+    // Verify the code
     const verification = await verificationDb.verify(email, code);
-    
+
     if (!verification) {
-      // Increment attempts for rate limiting
       await verificationDb.incrementAttempts(email);
-      return NextResponse.json({ 
-        error: 'Invalid or expired verification code' 
-      }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid or expired verification code' },
+        { status: 400 }
+      );
     }
 
-    // Check attempts limit (max 5)
+    // Check if too many attempts
     if (verification.attempts >= 5) {
-      return NextResponse.json({ 
-        error: 'Too many verification attempts. Please request a new code.' 
-      }, { status: 429 });
+      return NextResponse.json(
+        { error: 'Too many verification attempts. Please request a new code.' },
+        { status: 429 }
+      );
     }
 
-    // Create user from verification data
+    // Get user data from verification record
     const userData = verification.user_data;
-    if (!userData || !userData.name || !userData.email) {
-      return NextResponse.json({ error: 'User data not found in verification record' }, { status: 400 });
+
+    if (!userData || !userData.password_hash) {
+      return NextResponse.json(
+        { error: 'Invalid verification data' },
+        { status: 400 }
+      );
     }
 
-    // include password_hash if present in verification.user_data
-    const newUser = await userDb.create({
-      name: userData.name,
-      email: userData.email,
-      company: userData.company,
-      job_title: userData.job_title,
-      password_hash: userData.password_hash || null
-    });
+    // Check if user already exists
+    let user = await userDb.findByEmail(email);
 
-    // Verify user email
-    const user = await userDb.verifyEmail(email);
+    if (user) {
+      // User exists, just verify the email
+      await userDb.verifyEmail(email);
+    } else {
+      // Create new user
+      const result = await userDb.create({
+        name: userData.name,
+        email: userData.email,
+        company: userData.company || null,
+        job_title: userData.job_title || null,
+        password_hash: userData.password_hash
+      });
 
-    if (!user) {
-      // This should ideally not happen if the user was just created
-      return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 });
+      const userId = result.lastInsertRowid;
+
+      // 🆕 CREATE DEFAULT FREE SUBSCRIPTION for new user
+      try {
+        await createDefaultSubscription(userId);
+        console.log('✅ Free plan assigned to new user:', userId, email);
+      } catch (subError) {
+        console.error('⚠️ Failed to assign free plan to user:', userId, subError);
+        // Don't fail verification if subscription creation fails
+        // User can still use the app, subscription can be fixed later
+      }
+
+      // Verify the user
+      user = await userDb.verifyEmail(email);
     }
 
     // Clean up verification record
@@ -58,17 +80,9 @@ export async function POST(request) {
     // Create session
     const sessionToken = await sessionDb.create(user.id);
 
-    // Set HTTP-only cookie
-    const cookieStore = await cookies();
-    cookieStore.set('session_token', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 // 30 days (seconds)
-    });
-
-    return NextResponse.json({ 
-      success: true, 
+    // Create response with session cookie
+    const response = NextResponse.json({
+      success: true,
       message: 'Email verified successfully',
       user: {
         id: user.id,
@@ -79,8 +93,21 @@ export async function POST(request) {
       }
     });
 
+    // Set session cookie
+    response.cookies.set('session_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30 // 30 days
+    });
+
+    return response;
+
   } catch (error) {
-    console.error('Verification error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Email verification error:', error);
+    return NextResponse.json(
+      { error: 'Verification failed. Please try again.' },
+      { status: 500 }
+    );
   }
 }

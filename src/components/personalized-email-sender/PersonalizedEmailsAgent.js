@@ -27,12 +27,18 @@ import {
   Download
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import UsageWidget from '@/components/UsageWidget';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const BulkEmailAgent = ({ user, onLogout, isLoadingUser }) => {
   const router = useRouter();
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [showProfile, setShowProfile] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState(null);
+  const [usageData, setUsageData] = useState(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [smtpConfig, setSmtpConfig] = useState({
     host: 'smtp.gmail.com',
     port: 587,
@@ -155,6 +161,42 @@ Generate both subject line and email body. Make sure both are complete and profe
   const [generatedEmails, setGeneratedEmails] = useState([]);
   const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 2: Configure, 3: Preview, 4: Send, 5: Results
 
+  const fetchSubscriptionData = async () => {
+    if (!user) return;
+    
+    setIsLoadingSubscription(true);
+    try {
+      const response = await fetch('/api/subscriptions/current');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data.subscription);
+        setUsageData(data.usage);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscription data:', error);
+    } finally {
+      setIsLoadingSubscription(false);
+    }
+  };
+
+  // Check if user can start generation
+  const canStartGeneration = () => {
+    if (!user) return false;
+    if (!usageData) return false;
+    
+    // Check if user has personalized email access
+    if (usageData.personalized_email_limit === 0) {
+      return false;
+    }
+    
+    // Check if user has any remaining emails
+    if (usageData.personalized_emails_remaining === 0) {
+      return false;
+    }
+    
+    return true;
+  };
+
 
   // Handle CSV upload
   const handleCsvUpload = async (event) => {
@@ -228,11 +270,42 @@ Generate both subject line and email body. Make sure both are complete and profe
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Update usage data after successful generation
+        await fetchSubscriptionData();
+        
         return {
           person,
           email: data.email,
           subject: data.subject,
-          status: 'generated'
+          status: 'generated',
+          has_branding: data.has_branding
+        };
+      } else if (response.status === 403) {
+        // Limit reached
+        const errorData = await response.json();
+        
+        if (errorData.upgrade_required) {
+          // Show upgrade modal
+          setShowUpgradeModal(true);
+        }
+        
+        return {
+          person,
+          email: null,
+          subject: null,
+          status: 'limit_reached',
+          error: errorData.error
+        };
+      } else if (response.status === 401) {
+        // Authentication required
+        const errorData = await response.json();
+        return {
+          person,
+          email: null,
+          subject: null,
+          status: 'auth_required',
+          error: errorData.error
         };
       } else {
         throw new Error('Failed to generate email');
@@ -251,6 +324,22 @@ Generate both subject line and email body. Make sure both are complete and profe
 
   // Start bulk email generation
   const startBulkGeneration = async (regenerate = false) => {
+    // Check if user can generate
+    if (!canStartGeneration()) {
+      if (!user) {
+        alert('Please sign in to generate personalized emails');
+        return;
+      }
+      if (usageData?.personalized_email_limit === 0) {
+        setShowUpgradeModal(true);
+        return;
+      }
+      if (usageData?.personalized_emails_remaining === 0) {
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+
     if (regenerate) {
       setGeneratedEmails([]);
     }
@@ -265,14 +354,23 @@ Generate both subject line and email body. Make sure both are complete and profe
       sendResults: []
     });
 
-    const batchSize = 5; // Process 5 emails at a time
+    const batchSize = 5;
     const results = [];
+    let limitReached = false;
 
     for (let i = 0; i < csvData.length; i += batchSize) {
+      if (limitReached) break;
+
       const batch = csvData.slice(i, i + batchSize);
       
       const batchPromises = batch.map(generateEmailForPerson);
       const batchResults = await Promise.all(batchPromises);
+      
+      // Check if any result indicates limit reached
+      const limitReachedInBatch = batchResults.some(r => r.status === 'limit_reached');
+      if (limitReachedInBatch) {
+        limitReached = true;
+      }
       
       results.push(...batchResults);
       
@@ -280,20 +378,27 @@ Generate both subject line and email body. Make sure both are complete and profe
         ...prev,
         processed: results.length,
         successful: results.filter(r => r.status === 'generated').length,
-        failed: results.filter(r => r.status === 'failed').length,
+        failed: results.filter(r => r.status === 'failed' || r.status === 'limit_reached').length,
         currentBatch: batchResults
       }));
 
+      // Stop if limit reached
+      if (limitReached) {
+        break;
+      }
+
       // Add delay between batches to avoid rate limits
-      if (i + batchSize < csvData.length) {
+      if (i + batchSize < csvData.length && !limitReached) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
     setGeneratedEmails(results);
     setCampaignState(prev => ({ ...prev, status: 'completed' }));
+    
+    // Refresh subscription data to show updated usage
+    await fetchSubscriptionData();
   };
-
   // Send emails
   const sendBulkEmails = async () => {
     const successfulEmails = generatedEmails.filter(email => email.status === 'generated');
@@ -503,6 +608,18 @@ Generate both subject line and email body. Make sure both are complete and profe
         <Upload className="h-6 w-6" />
         Upload Contact List
       </h2>
+
+      {user && usageData && subscriptionData && (
+        <div className="mb-6">
+          <UsageWidget 
+            usage={usageData}
+            subscription={subscriptionData}
+            onUpgradeClick={() => router.push('/pricing')}
+            context="personalized"
+            totalToGenerate={csvData.length}
+          />
+        </div>
+      )}
       
       <div className="space-y-6">
         <div className="border-2 border-dashed border-white/30 rounded-xl p-8 text-center hover:border-white/50 transition-colors">
@@ -1287,6 +1404,12 @@ Generate both subject line and email body. Make sure both are complete and profe
     </div>
   );
 
+  useEffect(() => {
+    if (user) {
+      fetchSubscriptionData();
+    }
+  }, [user]);
+
   // Auth check
   if (!user && !isLoadingUser) {
     return (
@@ -1357,6 +1480,13 @@ Generate both subject line and email body. Make sure both are complete and profe
         {/* Main Content */}
         {renderStep()}
       </div>
+      {showUpgradeModal && (
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          limitType="personalized"
+        />
+      )}
     </div>
   );
 };

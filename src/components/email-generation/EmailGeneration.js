@@ -54,10 +54,12 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
     // Check free email status on mount and when user changes
     useEffect(() => {
         if (user) {
+            // For authenticated users, fetch subscription data
             fetchSubscriptionData();
-        }
-        const checkFreeEmail = async () => {
-            if (!user) {
+            setIsCheckingFreeEmail(false);
+        } else {
+            // For anonymous users, check free email status
+            const checkFreeEmail = async () => {
                 setIsCheckingFreeEmail(true);
                 try {
                     const response = await fetch('/api/check-free-email');
@@ -70,14 +72,11 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                 } finally {
                     setIsCheckingFreeEmail(false);
                 }
-            } else {
-                setIsCheckingFreeEmail(false);
-            }
-        };
+            };
 
-        checkFreeEmail();
+            checkFreeEmail();
+        }
     }, [user]);
-
     const tones = [
         { value: 'professional', label: 'Professional', icon: Briefcase },
         { value: 'friendly', label: 'Friendly', icon: Smile },
@@ -321,9 +320,10 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             {user && usageData && subscriptionData && (
             <div className="mb-8">
                 <UsageWidget 
-                usage={usageData}
-                subscription={subscriptionData}
-                onUpgradeClick={() => router.push('/pricing')}
+                    usage={usageData}
+                    subscription={subscriptionData}
+                    onUpgradeClick={() => router.push('/pricing')}
+                    context="simple"
                 />
             </div>
             )}

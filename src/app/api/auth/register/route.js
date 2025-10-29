@@ -1,66 +1,15 @@
-// app/api/auth/register/route.js
+// app/api/auth/register/route.js - UPDATED (No Password)
 import { NextResponse } from 'next/server';
-import { userDb, verificationDb, createDefaultSubscription } from '@/lib/database';
+import { userDb, verificationDb } from '@/lib/database';
 import { sendVerificationEmail, generateVerificationCode } from '@/lib/email-verification-service';
-import bcrypt from 'bcryptjs';
-
-// Password validation function
-function validatePassword(password) {
-  const errors = [];
-  
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
-  
-  if (password.length > 128) {
-    errors.push('Password must not exceed 128 characters');
-  }
-  
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-  
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-  
-  if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-  
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    errors.push('Password must contain at least one special character (!@#$%^&*()_+-=[]{};\':"|,.<>?/)');
-  }
-  
-  // Check for common weak passwords
-  const commonPasswords = ['password', '12345678', 'qwerty123', 'abc123'];
-  if (commonPasswords.some(common => password.toLowerCase().includes(common))) {
-    errors.push('Password is too common. Please choose a stronger password');
-  }
-  
-  return errors;
-}
 
 export async function POST(request) {
   try {
     const userData = await request.json();
-    const { name, email, company, job_title, password, confirm_password } = userData;
+    const { name, email, company, job_title } = userData;
     
-    if (!name || !email || !password || !confirm_password) {
-      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
-    }
-
-    if (password !== confirm_password) {
-      return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
-    }
-
-    // Validate password strength
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      return NextResponse.json({ 
-        error: 'Password does not meet requirements',
-        details: passwordErrors 
-      }, { status: 400 });
+    if (!name || !email) {
+      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
     }
 
     // Validate email format
@@ -73,22 +22,26 @@ export async function POST(request) {
     const existingUser = await userDb.findByEmail(email);
     if (existingUser) {
       if (existingUser.email_verified) {
-        return NextResponse.json({ error: 'User already exists and is verified' }, { status: 409 });
+        return NextResponse.json({ 
+          error: 'User already exists and is verified. Please login instead.' 
+        }, { status: 409 });
       } else {
         // User exists but not verified, resend verification
-        return await handleResendVerification(email, name);
+        return await handleResendVerification(email, name, 'registration');
       }
     }
 
-    // Hash password and store hash in verification record
-    const password_hash = bcrypt.hashSync(password, 10);
-
     // Generate and send verification code
     const verificationCode = generateVerificationCode();
-    await verificationDb.create(email, verificationCode, { name, email, company, job_title, password_hash });
+    await verificationDb.create(
+      email, 
+      verificationCode, 
+      { name, email, company, job_title },
+      'registration'
+    );
     
     // Send verification email
-    const emailResult = await sendVerificationEmail(email, verificationCode, name, { name, email, company, job_title });
+    const emailResult = await sendVerificationEmail(email, verificationCode, name, 'registration');
 
     if (!emailResult.success) {
       console.error('Failed to send verification email:', emailResult.error);
@@ -96,11 +49,6 @@ export async function POST(request) {
         error: 'Failed to send verification email. Please try again.' 
       }, { status: 500 });
     }
-
-    // 🆕 NOTE: Subscription will be created AFTER email verification
-    // We don't create the subscription here because the user hasn't been created yet
-    // The subscription will be created in the verify-email route after user is created
-    // (See updated verify-email route)
 
     return NextResponse.json({
       success: true,
@@ -115,13 +63,12 @@ export async function POST(request) {
 }
 
 // Helper function to handle resending verification
-async function handleResendVerification(email, name) {
+async function handleResendVerification(email, name, verificationType = 'registration') {
   try {
     const verificationCode = generateVerificationCode();
-    // Pass user data to the create function
-    await verificationDb.create(email, verificationCode, { name, email });
+    await verificationDb.create(email, verificationCode, { name, email }, verificationType);
     
-    const emailResult = await sendVerificationEmail(email, verificationCode, name);
+    const emailResult = await sendVerificationEmail(email, verificationCode, name, verificationType);
     
     if (!emailResult.success) {
       return NextResponse.json({ 

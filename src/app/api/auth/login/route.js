@@ -1,56 +1,63 @@
-// app/api/auth/login/route.js
+// app/api/auth/login/route.js - UPDATED (Code-Based Login)
 import { NextResponse } from 'next/server';
-import { userDb, sessionDb } from '@/lib/database';
-import bcrypt from 'bcryptjs';
+import { userDb, verificationDb } from '@/lib/database';
+import { sendVerificationEmail, generateVerificationCode } from '@/lib/email-verification-service';
 
 export async function POST(request) {
   try {
-    const { email, password } = await request.json();
+    const { email } = await request.json();
     
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Find user (now async)
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    // Find user
     const user = await userDb.findByEmail(email);
     
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'No account found with this email. Please register first.' 
+      }, { status: 404 });
     }
 
-    // ensure user has password_hash and verify
-    if (!user.password_hash) {
-      return NextResponse.json({ error: 'Account does not have a password set' }, { status: 403 });
-    }
-    
-    const valid = bcrypt.compareSync(password, user.password_hash);
-    if (!valid) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    // Check if user is verified
+    if (!user.email_verified) {
+      return NextResponse.json({ 
+        error: 'Email not verified. Please complete registration first.' 
+      }, { status: 403 });
     }
 
-    // Create session (now async)
-    const sessionToken = await sessionDb.create(user.id);
+    // Generate and send login verification code
+    const verificationCode = generateVerificationCode();
+    await verificationDb.create(
+      email, 
+      verificationCode, 
+      null, // No user data needed for login
+      'login'
+    );
 
-    // Set cookie
-    const response = NextResponse.json({ 
-      success: true, 
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        company: user.company,
-        job_title: user.job_title
-      }
+    // Send verification email
+    const emailResult = await sendVerificationEmail(email, verificationCode, user.name, 'login');
+
+    if (!emailResult.success) {
+      console.error('Failed to send login verification email:', emailResult.error);
+      return NextResponse.json({ 
+        error: 'Failed to send verification code. Please try again.' 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Verification code sent to your email. Please check your inbox.',
+      email: email
     });
-    
-    response.cookies.set('session_token', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 // 30 days
-    });
 
-    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

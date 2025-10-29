@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { Mail, User, Building, Briefcase, UserPlus, LogIn, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Mail, User, Building, Briefcase, UserPlus, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -11,25 +11,9 @@ const Register = () => {
     company: '',
     job_title: ''
   });
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // <-- new
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // <-- new
   const router = useRouter();
-
-  // Password validation checks
-  const passwordChecks = {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-  };
-
-  const allPasswordChecksPassed = Object.values(passwordChecks).every(check => check);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -41,25 +25,19 @@ const Register = () => {
     setError('');
 
     try {
-      const body = { ...formData, password, confirm_password: confirmPassword };
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         // Redirect to verification page with email parameter
-        router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+        router.push(`/verify-email?email=${encodeURIComponent(data.email)}&type=registration`);
       } else {
-        // Show all validation errors if available
-        if (data.details && Array.isArray(data.details)) {
-          setError(data.details.join('. '));
-        } else {
-          setError(data.error || 'Registration failed');
-        }
+        setError(data.error || 'Registration failed');
       }
     } catch (err) {
       setError('Network error. Please try again.');
@@ -92,7 +70,7 @@ const Register = () => {
         )}
 
         {/* Register Form */}
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-purple-100 text-sm font-medium mb-2">
               <User className="h-4 w-4 inline mr-2" />
@@ -151,85 +129,9 @@ const Register = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
-              <User className="h-4 w-4 inline mr-2" />
-              Password *
-            </label>
-
-            {/* Password input with eye toggle */}
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setShowPasswordRequirements(true)}
-                placeholder="Enter a secure password"
-                required
-                className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 pr-12 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(prev => !prev)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute inset-y-0 right-3 flex items-center px-2"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5 text-white/80" /> : <Eye className="h-5 w-5 text-white/80" />}
-              </button>
-            </div>
-
-            {/* Password Requirements */}
-            {showPasswordRequirements && password && (
-              <div className="mt-3 bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-                <p className="text-purple-100 text-xs font-semibold mb-2">Password must contain:</p>
-                <div className="space-y-1">
-                  <PasswordCheck met={passwordChecks.length} text="At least 8 characters" />
-                  <PasswordCheck met={passwordChecks.uppercase} text="One uppercase letter (A-Z)" />
-                  <PasswordCheck met={passwordChecks.lowercase} text="One lowercase letter (a-z)" />
-                  <PasswordCheck met={passwordChecks.number} text="One number (0-9)" />
-                  <PasswordCheck met={passwordChecks.special} text="One special character (!@#$%...)" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
-              <User className="h-4 w-4 inline mr-2" />
-              Confirm Password *
-            </label>
-
-            {/* Confirm password input with eye toggle */}
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                required
-                className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 pr-12 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(prev => !prev)}
-                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                className="absolute inset-y-0 right-3 flex items-center px-2"
-              >
-                {showConfirmPassword ? <EyeOff className="h-5 w-5 text-white/80" /> : <Eye className="h-5 w-5 text-white/80" />}
-              </button>
-            </div>
-
-            {confirmPassword && password !== confirmPassword && (
-              <p className="text-red-300 text-xs mt-2 flex items-center gap-1">
-                <X className="h-3 w-3" />
-                Passwords do not match
-              </p>
-            )}
-          </div>
-
           <button
-            onClick={handleSubmit}
-            disabled={isLoading || !allPasswordChecksPassed || password !== confirmPassword}
+            type="submit"
+            disabled={isLoading}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 mt-6"
           >
             {isLoading ? (
@@ -244,7 +146,7 @@ const Register = () => {
               </>
             )}
           </button>
-        </div>
+        </form>
 
         {/* Login Link */}
         <div className="text-center mt-6 pt-6 border-t border-white/20">
@@ -263,17 +165,5 @@ const Register = () => {
     </div>
   );
 };
-
-// Helper component for password requirement checks
-const PasswordCheck = ({ met, text }) => (
-  <div className="flex items-center gap-2 text-xs">
-    {met ? (
-      <Check className="h-3 w-3 text-green-400" />
-    ) : (
-      <X className="h-3 w-3 text-red-400" />
-    )}
-    <span className={met ? 'text-green-300' : 'text-purple-200'}>{text}</span>
-  </div>
-);
 
 export default Register;

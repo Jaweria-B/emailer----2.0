@@ -1,10 +1,10 @@
-// app/api/auth/verify-email/route.js
+// app/api/auth/verify-email/route.js - UPDATED (Handles Both Types)
 import { NextResponse } from 'next/server';
 import { userDb, verificationDb, sessionDb, createDefaultSubscription } from '@/lib/database';
 
 export async function POST(request) {
   try {
-    const { email, code } = await request.json();
+    const { email, code, verificationType } = await request.json();
 
     if (!email || !code) {
       return NextResponse.json(
@@ -13,11 +13,11 @@ export async function POST(request) {
       );
     }
 
-    // Verify the code
-    const verification = await verificationDb.verify(email, code);
+    // Verify the code with type
+    const verification = await verificationDb.verify(email, code, verificationType);
 
     if (!verification) {
-      await verificationDb.incrementAttempts(email);
+      await verificationDb.incrementAttempts(email, verificationType);
       return NextResponse.json(
         { error: 'Invalid or expired verification code' },
         { status: 400 }
@@ -32,58 +32,91 @@ export async function POST(request) {
       );
     }
 
-    // Get user data from verification record
-    const userData = verification.user_data;
+    let user;
+    let sessionToken;
 
-    if (!userData || !userData.password_hash) {
+    // Handle based on verification type
+    if (verification.verification_type === 'registration') {
+      // REGISTRATION FLOW
+      const userData = verification.user_data;
+
+      if (!userData) {
+        return NextResponse.json(
+          { error: 'Invalid verification data' },
+          { status: 400 }
+        );
+      }
+
+      // Check if user already exists
+      user = await userDb.findByEmail(email);
+
+      if (user) {
+        // User exists, just verify the email
+        await userDb.verifyEmail(email);
+      } else {
+        // Create new user (without password_hash)
+        const result = await userDb.create({
+          name: userData.name,
+          email: userData.email,
+          company: userData.company || null,
+          job_title: userData.job_title || null,
+          password_hash: null
+        });
+
+        const userId = result.lastInsertRowid;
+
+        // Create default free subscription for new user
+        try {
+          await createDefaultSubscription(userId);
+          console.log('✅ Free plan assigned to new user:', userId, email);
+        } catch (subError) {
+          console.error('⚠️ Failed to assign free plan to user:', userId, subError);
+        }
+
+        // Verify the user
+        user = await userDb.verifyEmail(email);
+      }
+
+      // Create session for new registration
+      sessionToken = await sessionDb.create(user.id);
+
+    } else if (verification.verification_type === 'login') {
+      // LOGIN FLOW
+      user = await userDb.findByEmail(email);
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      if (!user.email_verified) {
+        return NextResponse.json(
+          { error: 'Email not verified' },
+          { status: 403 }
+        );
+      }
+
+      // Create session for login
+      sessionToken = await sessionDb.create(user.id);
+
+    } else {
       return NextResponse.json(
-        { error: 'Invalid verification data' },
+        { error: 'Invalid verification type' },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
-    let user = await userDb.findByEmail(email);
-
-    if (user) {
-      // User exists, just verify the email
-      await userDb.verifyEmail(email);
-    } else {
-      // Create new user
-      const result = await userDb.create({
-        name: userData.name,
-        email: userData.email,
-        company: userData.company || null,
-        job_title: userData.job_title || null,
-        password_hash: userData.password_hash
-      });
-
-      const userId = result.lastInsertRowid;
-
-      // 🆕 CREATE DEFAULT FREE SUBSCRIPTION for new user
-      try {
-        await createDefaultSubscription(userId);
-        console.log('✅ Free plan assigned to new user:', userId, email);
-      } catch (subError) {
-        console.error('⚠️ Failed to assign free plan to user:', userId, subError);
-        // Don't fail verification if subscription creation fails
-        // User can still use the app, subscription can be fixed later
-      }
-
-      // Verify the user
-      user = await userDb.verifyEmail(email);
-    }
-
     // Clean up verification record
-    await verificationDb.delete(email);
-
-    // Create session
-    const sessionToken = await sessionDb.create(user.id);
+    await verificationDb.delete(email, verificationType);
 
     // Create response with session cookie
     const response = NextResponse.json({
       success: true,
-      message: 'Email verified successfully',
+      message: verification.verification_type === 'login' 
+        ? 'Login successful' 
+        : 'Email verified successfully',
       user: {
         id: user.id,
         name: user.name,

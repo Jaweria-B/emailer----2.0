@@ -1,17 +1,14 @@
-"use client"
+"use client";
 import React, { useState } from 'react';
 import { Mail, User, LogIn, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthContext } from '@/providers/AuthProvider';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { refreshUser } = useAuthContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,14 +19,14 @@ const LoginPage = () => {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        await refreshUser();
-        router.push('/dashboard');
+        // Redirect to verification page with email and type
+        router.push(`/verify-email?email=${encodeURIComponent(data.email)}&type=login`);
       } else {
         setError(data.error || 'Login failed');
       }
@@ -63,6 +60,13 @@ const LoginPage = () => {
           </div>
         )}
 
+        {/* Info Message */}
+        <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-3 mb-6">
+          <p className="text-purple-100 text-sm">
+            We'll send a verification code to your email to sign you in securely.
+          </p>
+        </div>
+
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -80,21 +84,6 @@ const LoginPage = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-purple-100 text-sm font-medium mb-3">
-              <User className="h-4 w-4 inline mr-2" />
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-              required
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
-            />
-          </div>
-
           <button
             type="submit"
             disabled={isLoading}
@@ -103,12 +92,12 @@ const LoginPage = () => {
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Signing In...
+                Sending Code...
               </>
             ) : (
               <>
                 <LogIn className="h-5 w-5" />
-                Sign In
+                Send Login Code
               </>
             )}
           </button>

@@ -201,30 +201,53 @@ export const userDb = {
 // -----------------------
 // Email verification operations
 // -----------------------
+// lib/database.js - UPDATED SECTIONS ONLY
+
+// -----------------------
+// Email verification operations - UPDATED
+// -----------------------
 export const verificationDb = {
-  create: async (email, code, userData) => {
+  create: async (email, code, userData, verificationType = 'registration') => {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     await sql`
-      INSERT INTO email_verification (email, verification_code, expires_at, attempts, user_data)
-      VALUES (${email}, ${code}, ${expiresAt.toISOString()}, 0, ${userData ? JSON.stringify(userData) : null})
+      INSERT INTO email_verification (email, verification_code, expires_at, attempts, user_data, verification_type)
+      VALUES (${email}, ${code}, ${expiresAt.toISOString()}, 0, ${userData ? JSON.stringify(userData) : null}, ${verificationType})
       ON CONFLICT (email)
       DO UPDATE SET
         verification_code = ${code},
         expires_at = ${expiresAt.toISOString()},
         attempts = 0,
         user_data = ${userData ? JSON.stringify(userData) : null},
+        verification_type = ${verificationType},
         created_at = CURRENT_TIMESTAMP
     `;
 
     return true;
   },
 
-  verify: async (email, code) => {
-    const result = await sql`
-      SELECT * FROM email_verification
-      WHERE email = ${email} AND verification_code = ${code} AND expires_at > NOW()
-    `;
+  verify: async (email, code, verificationType = null) => {
+    let result;
+    
+    if (verificationType) {
+      // Verify with specific type
+      result = await sql`
+        SELECT * FROM email_verification
+        WHERE email = ${email} 
+          AND verification_code = ${code} 
+          AND verification_type = ${verificationType}
+          AND expires_at > NOW()
+      `;
+    } else {
+      // Verify without type check (backward compatibility)
+      result = await sql`
+        SELECT * FROM email_verification
+        WHERE email = ${email} 
+          AND verification_code = ${code} 
+          AND expires_at > NOW()
+      `;
+    }
+    
     const verification = result[0] || null;
     if (verification && verification.user_data) {
       try {
@@ -236,16 +259,28 @@ export const verificationDb = {
     return verification;
   },
 
-  incrementAttempts: async (email) => {
-    await sql`
-      UPDATE email_verification
-      SET attempts = attempts + 1
-      WHERE email = ${email}
-    `;
+  incrementAttempts: async (email, verificationType = null) => {
+    if (verificationType) {
+      await sql`
+        UPDATE email_verification
+        SET attempts = attempts + 1
+        WHERE email = ${email} AND verification_type = ${verificationType}
+      `;
+    } else {
+      await sql`
+        UPDATE email_verification
+        SET attempts = attempts + 1
+        WHERE email = ${email}
+      `;
+    }
   },
 
-  delete: async (email) => {
-    await sql`DELETE FROM email_verification WHERE email = ${email}`;
+  delete: async (email, verificationType = null) => {
+    if (verificationType) {
+      await sql`DELETE FROM email_verification WHERE email = ${email} AND verification_type = ${verificationType}`;
+    } else {
+      await sql`DELETE FROM email_verification WHERE email = ${email}`;
+    }
   },
 
   cleanExpired: async () => {

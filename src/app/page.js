@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import PageWrapper from '@/components/PageWrapper';
 import EmailGeneration from '@/components/email-generation/EmailGeneration';
 import AnimatedEmailStats from '@/components/AnimatedEmailStats';
+import EmailCuratorHeader from '@/components/EmailCuratorHeader';
 import { AI_PROVIDERS } from '@/lib/ai-config';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { Users } from 'lucide-react';
@@ -28,6 +29,7 @@ const EmailWriter = () => {
 
   return (
     <PageWrapper>
+      <EmailCuratorHeader />
       <AnimatedEmailStats />
       <div className="flex justify-center mb-8">
         <button

@@ -713,7 +713,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                     onSubmit={handleGenerationFeedback}
                 />
             )}
-            <FloatingGenerationGuide />
+            {/* <FloatingGenerationGuide /> */}
             {/* Upgrade Modal */}
             {showUpgradeModal && (
             <UpgradeModal

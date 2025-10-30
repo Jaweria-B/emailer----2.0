@@ -1,11 +1,11 @@
-// lib/email-verification-service.js - COMPLETE FILE
+// lib/email-verification-service.js 
 import nodemailer from 'nodemailer';
 
 // Create reusable transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT || 587,
+    port: process.env.SMTP_PORT || 465,
     secure: process.env.SMTP_SECURE || false, // true for 465 (SSL), false for other ports
     auth: {
       user: process.env.SMTP_USER,

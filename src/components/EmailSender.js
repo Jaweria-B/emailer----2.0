@@ -346,7 +346,7 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
   const displayedEmails = showAllEmails ? emailList : emailList.slice(0, 5);
 
   return (
-    <div className="email-sender min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 pb-20">
+    <div className="email-sender min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800 pb-20">
       <div className="container mx-auto px-4 py-8 min-h-screen">
         {/* Header */}
         <div className="text-center mb-8">

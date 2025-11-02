@@ -34,7 +34,7 @@ const EmailWriter = () => {
       <div className="flex justify-center mb-8">
         <button
           onClick={() => router.push('/personalized-emails')}
-          className="group bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl border border-white/20 backdrop-blur-lg flex items-center gap-3 text-lg cursor-pointer"
+          className="group bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-500 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl border border-white/20 backdrop-blur-lg flex items-center gap-3 text-lg cursor-pointer"
         >
           <Users className="h-6 w-6 group-hover:animate-pulse" />
           <span>Send Personalized Emails</span>

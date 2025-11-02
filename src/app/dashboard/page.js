@@ -121,7 +121,7 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800 flex items-center justify-center">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading dashboard...</p>
@@ -137,7 +137,7 @@ const Dashboard = () => {
 
   return (
     <PageWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800">
+      <div className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">

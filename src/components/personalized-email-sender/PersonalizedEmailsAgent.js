@@ -609,7 +609,7 @@ Generate both subject line and email body. Make sure both are complete and profe
         Upload Contact List
       </h2>
 
-      {user && usageData && subscriptionData && (
+      {/* {user && usageData && subscriptionData && (
         <div className="mb-6">
           <UsageWidget 
             usage={usageData}
@@ -620,7 +620,7 @@ Generate both subject line and email body. Make sure both are complete and profe
           />
         </div>
       )}
-      
+       */}
       <div className="space-y-6">
         <div className="border-2 border-dashed border-white/30 rounded-xl p-8 text-center hover:border-white/50 transition-colors">
           <input
@@ -1413,7 +1413,7 @@ Generate both subject line and email body. Make sure both are complete and profe
   // Auth check
   if (!user && !isLoadingUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl text-center max-w-md">
           <Bot className="h-16 w-16 text-white/50 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-4">Bulk Email Agent</h1>
@@ -1430,7 +1430,7 @@ Generate both subject line and email body. Make sure both are complete and profe
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800">
+    <div className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

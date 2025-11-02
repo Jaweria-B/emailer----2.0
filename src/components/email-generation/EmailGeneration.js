@@ -317,7 +317,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
 
     return (
         <div>
-            {user && usageData && subscriptionData && (
+            {/* {user && usageData && subscriptionData && (
             <div className="mb-8">
                 <UsageWidget 
                     usage={usageData}
@@ -326,7 +326,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                     context="simple"
                 />
             </div>
-            )}
+            )} */}
             <div className="grid lg:grid-cols-2 gap-12">
                 {/* Input Section */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">

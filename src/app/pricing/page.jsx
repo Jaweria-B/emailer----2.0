@@ -170,7 +170,7 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <PageWrapper showFooter={false} className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800">
+      <PageWrapper showFooter={false} className="min-h-screen bg-gradient-to-br from-[#667EEA] to-indigo-800">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-white" />
         </div>
@@ -179,7 +179,7 @@ export default function PricingPage() {
   }
 
   return (
-    <PageWrapper showFooter={true} className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800 px-4 py-8">
+    <PageWrapper showFooter={true} className="min-h-screen bg-gradient-to-br from-[#667EEA] to-indigo-800 px-4 py-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 mt-8">

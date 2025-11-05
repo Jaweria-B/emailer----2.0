@@ -624,7 +624,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
                             {(generatedEmail.subject || generatedEmail.body) && (
                                 <>
-                                    <button
+                                    {/* <button
                                         onClick={copyToClipboard}
                                         className={`flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl transition-all duration-300 text-sm sm:text-base min-w-0 ${
                                             copySuccess
@@ -634,7 +634,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                     >
                                         <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                                         <span className="xs:inline">{copySuccess ? 'Copied!' : 'Copy'}</span>
-                                    </button>
+                                    </button> */}
                                     <button
                                         onClick={openEmailSender}
                                         className="flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 text-sm sm:text-base min-w-0"
@@ -649,7 +649,10 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
 
                     <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 lg:p-6 min-h-[300px] sm:min-h-[400px]">
                         {generatedEmail.subject || generatedEmail.body ? (
-                            <div className="text-white space-y-3 sm:space-y-4">
+                            <div className="text-white space-y-3 sm:space-y-4 select-none"
+                                onCopy={(e) => e.preventDefault()}
+                                onCut={(e) => e.preventDefault()}
+                            >
                                 <div>
                                     <h3 className="text-base sm:text-lg font-semibold text-purple-200 mb-2">Subject:</h3>
                                     <div className="bg-white/10 rounded-lg p-2 sm:p-3 border border-white/20 break-words">

@@ -576,15 +576,15 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                             {isLoading ? (
                                 <>
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                    Crafting with {AI_PROVIDER_INFO[selectedProvider].name}...
+                                    Crafting with EmailCurator...
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="h-5 w-5" />
                                     {user
-                                        ? `Generate Email with ${AI_PROVIDER_INFO[selectedProvider].name}`
+                                        ? `Generate Email with EmailCurator`
                                         : hasFreeEmail
-                                        ? `Try Free Generation with ${AI_PROVIDER_INFO[selectedProvider].name}`
+                                        ? `Try Free Generation with EmailCurator}`
                                         : 'Sign In to Generate Email'
                                     }
                                 </>
@@ -697,7 +697,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             {/* Footer */}
             <div className="text-center my-12">
                 <p className="text-purple-200 text-sm">
-                    Powered by {AI_PROVIDER_INFO[selectedProvider].name} • 
+                    Powered by OpenPromote • 
                     Professional AI email generation service
                 </p>
                 <p className="text-purple-300 text-xs mt-2">

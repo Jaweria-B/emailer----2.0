@@ -144,29 +144,36 @@ export class EmailGenerationService {
 }
 
 export const createPrompt = (formData) => {
-  return `Transform the following raw thoughts into a well-written email and return the response as a JSON object with "subject" and "body" fields:
+  return `You are an expert email writer. Transform the following raw thoughts into a polished, professional email.
 
-Raw thoughts: ${formData.rawThoughts}
+  Raw thoughts: ${formData.rawThoughts}
 
-Email Details:
-- Tone: ${formData.tone}
-- Recipient: ${formData.recipient || 'Not specified'}
-- Sender's Name: ${formData.senderName || 'Not specified'}
-- Subject context: ${formData.subject || 'Not specified'}
-- Relationship: ${formData.relationship}
-- Purpose: ${formData.purpose}
-- Priority: ${formData.priority}
-- Desired length: ${formData.length}
-- Additional context: ${formData.context || 'None'}
-${formData.replyingTo ? `- Replying to this email: ${formData.replyingTo}` : ''}
+  Email Requirements:
+  - Tone: ${formData.tone}
+  ${formData.recipient ? `- Recipient: ${formData.recipient}` : ''}
+  ${formData.senderName ? `- Sign off with: ${formData.senderName}` : '- Use an appropriate sign-off without a specific name'}
+  ${formData.subject ? `- Subject context: ${formData.subject}` : ''}
+  - Relationship with recipient: ${formData.relationship}
+  - Email purpose: ${formData.purpose}
+  - Priority level: ${formData.priority}
+  - Desired length: ${formData.length}
+  ${formData.context ? `- Additional context: ${formData.context}` : ''}
+  ${formData.replyingTo ? `- This is a reply to: ${formData.replyingTo}` : ''}
 
-Please write a ${formData.tone} email that is ${formData.length} in length. Make it appropriate for the relationship type (${formData.relationship}) and purpose (${formData.purpose}). ${formData.priority === 'urgent' ? 'This is urgent, so make that clear.' : ''} ${formData.priority === 'high' ? 'This has high priority.' : ''}. Write the Sender's Name as given as ${formData.senderName}
+  Instructions:
+  1. Write a ${formData.tone} email that is ${formData.length} in length
+  2. Match the tone and formality to the ${formData.relationship} relationship
+  3. Ensure the email clearly addresses the ${formData.purpose}
+  ${formData.priority === 'urgent' ? '4. Convey urgency appropriately without being pushy' : formData.priority === 'high' ? '4. Communicate the high priority professionally' : ''}
+  4. Create a clear, compelling subject line that accurately reflects the email content
+  5. Write naturally - NO placeholders, NO brackets, NO template markers like [Name] or [Date]
+  6. If information is missing, write around it gracefully - use context clues or general phrasing
+  7. Make the email feel complete and ready to send as-is
+  ${formData.senderName ? `8. End with an appropriate closing and sign with "${formData.senderName}"` : '8. End with an appropriate closing phrase (like "Best regards," or "Thank you,") without a signature name'}
 
-Return ONLY a valid JSON object in this exact format:
-{
-  "subject": "Your email subject here",
-  "body": "Your email body content here"
-}
-
-Do not include any additional text, explanations, or formatting outside of the JSON object. Do not wrap the JSON in markdown code blocks.`;
+  Critical: Return ONLY a valid JSON object with no markdown, no code blocks, no explanations:
+  {
+    "subject": "Your email subject here",
+    "body": "Your complete email body here"
+  }`;
 };

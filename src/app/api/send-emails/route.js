@@ -1,16 +1,66 @@
 import nodemailer from 'nodemailer';
 import { NextResponse } from 'next/server';
 
-// Helper function to create delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper function to divide array into batches
 const createBatches = (array, batchSize) => {
   const batches = [];
   for (let i = 0; i < array.length; i += batchSize) {
     batches.push(array.slice(i, i + batchSize));
   }
   return batches;
+};
+
+// Create a fresh transporter
+const createTransporter = (smtpConfig) => {
+  let transporterConfig;
+
+  if (!smtpConfig.host || smtpConfig.host === 'smtp.gmail.com') {
+    transporterConfig = {
+      service: 'gmail',
+      auth: {
+        user: smtpConfig.auth.user,
+        pass: smtpConfig.auth.pass,
+      },
+      pool: true, // Use connection pooling
+      maxConnections: 1, // Limit to 1 connection for better stability
+      maxMessages: 50, // Recreate connection after 50 messages
+      rateDelta: 1000, // 1 second
+      rateLimit: 5, // Max 5 emails per second
+    };
+  } else {
+    transporterConfig = {
+      host: smtpConfig.host,
+      port: smtpConfig.port || 587,
+      secure: smtpConfig.secure || false,
+      auth: {
+        user: smtpConfig.auth.user,
+        pass: smtpConfig.auth.pass,
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      pool: true,
+      maxConnections: 2,
+      maxMessages: 50,
+      rateDelta: 1000,
+      rateLimit: 10,
+    };
+
+    if (smtpConfig.host.includes('hostinger.com')) {
+      transporterConfig.secure = true;
+      transporterConfig.port = smtpConfig.port || 465;
+    } else if (smtpConfig.host.includes('outlook.com') || smtpConfig.host.includes('hotmail.com')) {
+      transporterConfig.secure = false;
+      transporterConfig.port = smtpConfig.port || 587;
+      transporterConfig.requireTLS = true;
+    } else if (smtpConfig.host.includes('yahoo.com')) {
+      transporterConfig.secure = false;
+      transporterConfig.port = smtpConfig.port || 587;
+    }
+  }
+
+  return nodemailer.createTransport(transporterConfig);
 };
 
 export async function POST(request) {
@@ -31,57 +81,8 @@ export async function POST(request) {
       return NextResponse.json({ message: 'SMTP configuration is required' }, { status: 400 });
     }
 
-    // Create transporter ONCE - KEY FIX
-    let transporterConfig;
-
-    if (!smtpConfig.host || smtpConfig.host === 'smtp.gmail.com') {
-      transporterConfig = {
-        service: 'gmail',
-        auth: {
-          user: smtpConfig.auth.user,
-          pass: smtpConfig.auth.pass,
-        },
-        pool: {
-          maxConnections: 5,
-          maxMessages: 100,
-          rateDelta: 4000,
-          rateLimit: 14, // 14 emails per 4 seconds
-        },
-      };
-    } else {
-      transporterConfig = {
-        host: smtpConfig.host,
-        port: smtpConfig.port || 587,
-        secure: smtpConfig.secure || false,
-        auth: {
-          user: smtpConfig.auth.user,
-          pass: smtpConfig.auth.pass,
-        },
-        tls: {
-          rejectUnauthorized: false
-        },
-        pool: {
-          maxConnections: 5,
-          maxMessages: 100,
-          rateDelta: 4000,
-          rateLimit: 20,
-        },
-      };
-
-      if (smtpConfig.host.includes('hostinger.com')) {
-        transporterConfig.secure = true;
-        transporterConfig.port = smtpConfig.port || 465;
-      } else if (smtpConfig.host.includes('outlook.com') || smtpConfig.host.includes('hotmail.com')) {
-        transporterConfig.secure = false;
-        transporterConfig.port = smtpConfig.port || 587;
-        transporterConfig.requireTLS = true;
-      } else if (smtpConfig.host.includes('yahoo.com')) {
-        transporterConfig.secure = false;
-        transporterConfig.port = smtpConfig.port || 587;
-      }
-    }
-
-    transporter = nodemailer.createTransport(transporterConfig);
+    // Create initial transporter
+    transporter = createTransporter(smtpConfig);
 
     // Verify the transporter configuration
     try {
@@ -95,13 +96,15 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Configuration for batching
-    const BATCH_SIZE = 30;
-    const BATCH_DELAY = 2000; // 2 second delay between batches
-    const EMAIL_DELAY = 100; // 100ms delay between individual emails
+    // Adjusted configuration for Gmail limits
+    const BATCH_SIZE = 20; // Smaller batches
+    const BATCH_DELAY = 5000; // 5 second delay between batches
+    const EMAIL_DELAY = 300; // 300ms delay between emails (safer)
+    const RECONNECT_AFTER = 50; // Recreate transporter every 50 emails
 
     const emailBatches = createBatches(emails, BATCH_SIZE);
     const results = [];
+    let emailsSentCount = 0;
 
     console.log(`Processing ${emails.length} emails in ${emailBatches.length} batches of ${BATCH_SIZE}`);
 
@@ -111,6 +114,16 @@ export async function POST(request) {
       const batchNumber = batchIndex + 1;
       
       console.log(`Processing batch ${batchNumber}/${emailBatches.length} with ${batch.length} emails`);
+
+      // Recreate transporter periodically to avoid connection issues
+      if (emailsSentCount > 0 && emailsSentCount % RECONNECT_AFTER === 0) {
+        console.log('Recreating transporter connection...');
+        await transporter.close();
+        await delay(2000); // Wait 2 seconds before reconnecting
+        transporter = createTransporter(smtpConfig);
+        await transporter.verify();
+        console.log('Transporter reconnected');
+      }
 
       // Process emails in current batch
       for (let emailIndex = 0; emailIndex < batch.length; emailIndex++) {
@@ -126,7 +139,7 @@ export async function POST(request) {
           };
 
           await transporter.sendMail(mailOptions);
-          console.log(`✓ Email sent successfully to ${email}`);
+          console.log(`✓ Email ${emailsSentCount + 1} sent successfully to ${email}`);
           
           results.push({
             email: email,
@@ -136,8 +149,43 @@ export async function POST(request) {
             timestamp: new Date().toISOString()
           });
 
+          emailsSentCount++;
+
         } catch (error) {
           console.error(`✗ Error sending email to ${email}:`, error.message);
+          
+          // Check if it's a connection error and try to reconnect
+          if (error.message.includes('connection') || error.message.includes('timeout')) {
+            console.log('Connection error detected, attempting to reconnect...');
+            try {
+              await transporter.close();
+              await delay(3000);
+              transporter = createTransporter(smtpConfig);
+              await transporter.verify();
+              console.log('Reconnection successful');
+              
+              // Retry sending this email
+              try {
+                await transporter.sendMail(mailOptions);
+                console.log(`✓ Email sent successfully to ${email} after reconnect`);
+                results.push({
+                  email: email,
+                  success: true,
+                  retried: true,
+                  batch: batchNumber,
+                  batchPosition: emailIndex + 1,
+                  timestamp: new Date().toISOString()
+                });
+                emailsSentCount++;
+                continue;
+              } catch (retryError) {
+                console.error(`Failed again after retry: ${retryError.message}`);
+              }
+            } catch (reconnectError) {
+              console.error(`Reconnection failed: ${reconnectError.message}`);
+            }
+          }
+          
           results.push({
             email: email,
             success: false,
@@ -186,7 +234,6 @@ export async function POST(request) {
       error: error.message 
     }, { status: 500 });
   } finally {
-    // Close the transporter connection when done
     if (transporter) {
       await transporter.close();
       console.log('Transporter closed');

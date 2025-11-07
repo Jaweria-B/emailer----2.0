@@ -1,0 +1,20 @@
+# robots.txt for OpenPromote - AI Email Generator
+# https://openpromote.uinfo.org
+
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /register
+
+# Disallow private/user-specific pages
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /verify-email
+
+
+# Sitemap location
+Sitemap: https://openpromote.uinfo.org/sitemap.xml
+
+# Crawl-delay 
+Crawl-delay: 1

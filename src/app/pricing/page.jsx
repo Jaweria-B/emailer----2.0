@@ -114,11 +114,11 @@ export default function PricingPage() {
         included: plan.simple_email_limit > 0,
         highlight: true
       },
-      {
-        text: `${plan.personalized_email_limit} Personalized Emails/month`,
-        included: plan.personalized_email_limit > 0,
-        highlight: true
-      },
+      // {
+      //   text: `${plan.personalized_email_limit} Personalized Emails/month`,
+      //   included: plan.personalized_email_limit > 0,
+      //   highlight: true
+      // },
       {
         text: plan.has_branding ? 'Includes OpenPromote Branding' : 'No Branding',
         included: !plan.has_branding
@@ -195,7 +195,7 @@ export default function PricingPage() {
               <p className="text-white font-semibold mb-2">Your Current Usage</p>
               <div className="text-sm text-purple-100 space-y-1">
                 <p>Simple Emails: {usage.simple_emails_used}/{usage.simple_emails_limit}</p>
-                <p>Personalized: {usage.personalized_emails_used}/{usage.personalized_emails_limit}</p>
+                {/* <p>Personalized: {usage.personalized_emails_used}/{usage.personalized_emails_limit}</p> */}
               </div>
             </div>
           )}

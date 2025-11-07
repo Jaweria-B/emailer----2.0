@@ -168,7 +168,7 @@ const Dashboard = () => {
             </div>
           </div>
           {/* Warning Banners */}
-          {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
+          {/* {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
             <div className="mb-4 sm:mb-6 space-y-3">
               {showSimpleWarning && usageData.simple_emails_remaining > 0 && (
                 <div className="bg-yellow-500/20 backdrop-blur-lg border border-yellow-500/40 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -222,7 +222,7 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -240,7 +240,7 @@ const Dashboard = () => {
             </div>
 
             {/* Personalized Emails Card */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
+            {/* <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-2">
                 <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-300" />
                 <div>
@@ -250,7 +250,7 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Current Plan Card */}
             <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
@@ -314,7 +314,7 @@ const Dashboard = () => {
               </div>
 
               {/* Personalized Emails Progress */}
-              <div>
+              {/* <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-purple-200 font-medium text-sm sm:text-base">Personalized Emails</span>
                   <span className="text-white font-bold text-sm sm:text-base">
@@ -345,7 +345,7 @@ const Dashboard = () => {
                     {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No limit data'}
                   </p>
                 )}
-              </div>
+              </div> */}
             </div>
 
             {/* Plan Details */}

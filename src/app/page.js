@@ -29,7 +29,7 @@ const EmailWriter = () => {
   return (
     <PageWrapper>
       <EmailCuratorHeader />
-      <AnimatedEmailStats />
+      {/* <AnimatedEmailStats /> */}
       {/* <div className="flex justify-center mb-8">
         <button
           onClick={() => router.push('/personalized-emails')}

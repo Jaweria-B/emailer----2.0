@@ -61,11 +61,11 @@ export async function POST(request) {
     }
 
     // Get the AIML API key from environment variables
-    const apiKey = process.env.AIML_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'AIML API key not configured on server' },
+        { error: 'GEMINI API key not configured on server' },
         { status: 500 }
       );
     }
@@ -135,15 +135,18 @@ export async function POST(request) {
   } catch (error) {
     console.error('Email generation error:', error);
     
-    if (error.message.includes('API error')) {
-      return NextResponse.json(
-        { error: `AI Provider Error: ${error.message}` },
-        { status: 502 }
-      );
-    }
+    // if (error.message.includes('API error')) {
+    //   return NextResponse.json(
+    //     { error: `AI Provider Error: ${error.message}` },
+    //     { status: 502 }
+    //   );
+    // }
 
     return NextResponse.json(
-      { error: 'Failed to generate email. Please try again.' },
+      { 
+        error: 'We\'re having trouble generating your email right now. Please try again in a few moments.',
+        user_friendly: true
+      },
       { status: 500 }
     );
   }

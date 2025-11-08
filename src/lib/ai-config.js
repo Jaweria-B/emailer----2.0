@@ -4,18 +4,18 @@ export const AI_PROVIDERS = {
 };
 
 export const AI_MODELS = {
-  [AI_PROVIDERS.GEMINI]: 'google/gemini-2.0-flash'
+  [AI_PROVIDERS.GEMINI]: 'gemini-2.5-flash'
 };
 
 export const AI_ENDPOINTS = {
-  [AI_PROVIDERS.GEMINI]: 'https://api.aimlapi.com/v1/chat/completions'
+  [AI_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta/models'
 };
 
 export const AI_PROVIDER_INFO = {
   [AI_PROVIDERS.GEMINI]: {
-    name: 'Google Gemini (AIML)',
-    description: 'Google\'s Gemini 2.0 Flash via AIML API',
-    keyFormat: 'API Key',
-    website: 'https://aimlapi.com'
+    name: 'Google Gemini',
+    description: 'Google\'s Official Gemini 2.5 Flash Model',
+    keyFormat: 'API Key (Get from Google AI Studio)',
+    website: 'https://aistudio.google.com/'
   }
 };

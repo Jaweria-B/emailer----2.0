@@ -169,24 +169,26 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             });
 
             if (!response.ok) {
-            const errorData = await response.json();
-            if (response.status === 403) {
-                // Check if it's a subscription limit issue
-                if (errorData.upgrade_required) {
-                setShowUpgradeModal(true);
+                const errorData = await response.json();
+                
+                if (response.status === 403) {
+                    // Handle subscription/limit errors
+                    if (errorData.upgrade_required) {
+                    setShowUpgradeModal(true);
+                    return;
+                    }
+                    
+                    // Handle anonymous user
+                    setHasFreeEmail(false);
+                    if (confirm(errorData.error + ' Would you like to sign in now?')) {
+                    router.push('/login');
+                    }
+                    return;
+                }
+                
+                // User-friendly error message for all other errors
+                alert('We\'re experiencing high demand right now. Please try generating your email again in a moment.');
                 return;
-                }
-                
-                // Handle anonymous user (free email used)
-                setHasFreeEmail(false);
-                
-                if (confirm(errorData.error + ' Would you like to sign in now?')) {
-                router.push('/login');
-                }
-            } else {
-                throw new Error(errorData.error || 'Failed to generate email');
-            }
-            return;
             }
 
             const result = await response.json();
@@ -209,8 +211,9 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             setShowGenerationFeedback(true);
             }, 1500);
         } catch (error) {
+            // Log error for debugging but show friendly message
             console.error('Error generating email:', error);
-            alert(`Error generating email: ${error.message}. Please try again.`);
+            alert('Something went wrong while crafting your email. Please check your connection and try again.');
         } finally {
             setIsLoading(false);
         }

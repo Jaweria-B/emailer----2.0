@@ -1,7 +1,8 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { User, Building, LogOut, UserPlus, LogIn, Share2, DollarSign, Menu, X } from 'lucide-react';
+import { User, Building, LogOut, UserPlus, LogIn, Mail, DollarSign, Menu, X, ChevronDown, Waypoints  } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Button from './button';
 
 const Header = ({ user, onLogout, isLoadingUser }) => {
   const [showProfile, setShowProfile] = useState(false);
@@ -18,187 +19,311 @@ const Header = ({ user, onLogout, isLoadingUser }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showProfile && !event.target.closest('.profile-dropdown')) {
+        setShowProfile(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfile]);
+
   return (
     <>
-      {/* Header Container - Takes up space in document flow */}
-      <div className="h-15 w-full max-w-full"></div>
-
-      {/* Fixed Header with Blur Background on Scroll */}
-      <div 
+      {/* Fixed Header */}
+      <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white/1 backdrop-blur-md shadow-lg' : ''
+          isScrolled 
+            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b' 
+            : 'bg-white border-b'
         }`}
+        style={{
+          borderColor: 'var(--header-border)',
+        }}
       >
-        <div className="w-full px-6 xl:px-12 py-6 flex items-center justify-between">
-          {/* Company Logo - Left Side */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => router.push('/')}
-          >
-            <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-3 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-              <Share2 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tracking-tight">
-                OpenPromote
-              </h2>
-              <p className="text-xs text-purple-200 -mt-1 hidden sm:block">Automate. Engage. Grow.</p>
-            </div>
-          </div>
-
-          {/* Desktop Navigation - Right Side */}
-          <div className="hidden lg:flex items-center gap-3">
-            {/* Pricing Button */}
-            <button
-              onClick={() => router.push('/pricing')}
-              className="bg-white/20 backdrop-blur-lg text-white px-4 py-2 rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center gap-2"
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* Logo and Brand - Left Side */}
+            <div 
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => router.push('/')}
             >
-              <DollarSign className="h-4 w-4" />
-              Pricing
-            </button>
+              {/* Logo Icon */}
+              <div 
+                className="rounded-lg p-2 transition-transform duration-200 group-hover:scale-105"
+                style={{ backgroundColor: 'var(--primary-color)' }}
+              >
+                <Waypoints  className="h-5 w-5 text-white" strokeWidth={2.5} />
+              </div>
+              
+              {/* Brand Name */}
+              <span 
+                className="text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--header-text)' }}
+              >
+                Open Promote
+              </span>
+            </div>
 
-            {/* User Profile or Auth Buttons */}
-            {!isLoadingUser && user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowProfile(!showProfile)}
-                  className="bg-white/20 backdrop-blur-lg text-white px-4 py-2 rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center gap-2"
-                >
-                  <User className="h-4 w-4" />
-                  <span>{user.name}</span>
-                </button>
-                
-                {showProfile && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 shadow-2xl">
-                    <div className="text-white space-y-3">
-                      <div className="border-b border-white/20 pb-3">
-                        <p className="font-semibold">{user.name}</p>
-                        <p className="text-sm text-purple-200">{user.email}</p>
-                        {user.company && <p className="text-xs text-purple-300">{user.company}</p>}
-                        {user.job_title && <p className="text-xs text-purple-300">{user.job_title}</p>}
+            {/* Desktop Navigation - Right Side */}
+            <nav className="hidden md:flex items-center gap-2">
+              
+              {/* Pricing Link */}
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/pricing')}
+                icon={<DollarSign className="h-4 w-4" />}
+              >
+                Pricing
+              </Button>
+
+              {/* Divider */}
+              <div 
+                className="h-6 w-px mx-2"
+                style={{ backgroundColor: 'var(--border-light)' }}
+              />
+
+              {/* User Authentication Section */}
+              {!isLoadingUser && user ? (
+                <div className="relative profile-dropdown">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowProfile(!showProfile)}
+                    icon={<User className="h-4 w-4" />}
+                    className="gap-1"
+                  >
+                    <span className="max-w-[120px] truncate">{user.name}</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showProfile ? 'rotate-180' : ''}`} />
+                  </Button>
+                  
+                  {/* Profile Dropdown */}
+                  {showProfile && (
+                    <div 
+                      className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg border overflow-hidden"
+                      style={{
+                        backgroundColor: 'var(--dropdown-bg)',
+                        borderColor: 'var(--dropdown-border)',
+                        boxShadow: 'var(--dropdown-shadow)',
+                      }}
+                    >
+                      {/* User Info */}
+                      <div 
+                        className="px-4 py-3 border-b"
+                        style={{ borderColor: 'var(--border-light)' }}
+                      >
+                        <p 
+                          className="font-semibold text-sm"
+                          style={{ color: 'var(--header-text)' }}
+                        >
+                          {user.name}
+                        </p>
+                        <p 
+                          className="text-sm mt-0.5"
+                          style={{ color: 'var(--text-secondary)' }}
+                        >
+                          {user.email}
+                        </p>
+                        {user.company && (
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: 'var(--text-tertiary)' }}
+                          >
+                            {user.company}
+                          </p>
+                        )}
                       </div>
-                      <button
-                        onClick={() => router.push('/dashboard')}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
-                      >
-                        <Building className="h-4 w-4" />
-                        Dashboard
-                      </button>
-                      <button
-                        onClick={onLogout}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2 text-red-200"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                      </button>
+                      
+                      {/* Menu Items */}
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            router.push('/dashboard');
+                            setShowProfile(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors"
+                          style={{ 
+                            color: 'var(--header-text)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Building className="h-4 w-4" />
+                          Dashboard
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            onLogout();
+                            setShowProfile(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors"
+                          style={{ 
+                            color: 'var(--error)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : !isLoadingUser ? (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => router.push('/login')}
-                  className="bg-white/20 backdrop-blur-lg text-white px-4 py-2 rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center gap-2"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Sign In
-                </button>
-                <button
-                  onClick={() => router.push('/register')}
-                  className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-4 py-2 rounded-full transition-all duration-300 flex items-center gap-2"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Register
-                </button>
-              </div>
-            ) : null}
-          </div>
+                  )}
+                </div>
+              ) : !isLoadingUser ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.push('/login')}
+                    icon={<LogIn className="h-4 w-4" />}
+                  >
+                    Sign In
+                  </Button>
+                  
+                  <Button
+                    variant="primary"
+                    onClick={() => router.push('/register')}
+                    icon={<UserPlus className="h-4 w-4" />}
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              ) : null}
+            </nav>
 
-          {/* Mobile Menu Button - Right Side */}
-          <div className="lg:hidden">
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300"
-            >
-              {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                icon={showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                className="p-2"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu */}
         {showMobileMenu && (
-          <div className="lg:hidden w-full px-6 xl:px-12 pb-4">
-            <div className="w-full sm:w-64 ml-auto bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 shadow-2xl">
-              <div className="text-white space-y-3">
-                {/* Pricing */}
-                <button
-                  onClick={() => {
-                    router.push('/pricing');
-                    setShowMobileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
-                >
-                  <DollarSign className="h-4 w-4" />
-                  Pricing
-                </button>
+          <div 
+            className="md:hidden border-t"
+            style={{ borderColor: 'var(--border-light)' }}
+          >
+            <div className="px-4 py-3 space-y-2">
+              
+              {/* Pricing */}
+              <button
+                onClick={() => {
+                  router.push('/pricing');
+                  setShowMobileMenu(false);
+                }}
+                className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                style={{ color: 'var(--header-text)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-ghost-hover-bg)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <DollarSign className="h-4 w-4" />
+                Pricing
+              </button>
 
-                {!isLoadingUser && user ? (
-                  <>
-                    <div className="border-t border-white/20 pt-3">
-                      <p className="font-semibold px-3 mb-2">{user.name}</p>
-                      <p className="text-sm text-purple-200 px-3 mb-2">{user.email}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        router.push('/dashboard');
-                        setShowMobileMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
+              {/* Divider */}
+              <div 
+                className="h-px my-2"
+                style={{ backgroundColor: 'var(--border-light)' }}
+              />
+
+              {!isLoadingUser && user ? (
+                <>
+                  {/* User Info */}
+                  <div className="px-3 py-2">
+                    <p 
+                      className="font-semibold text-sm"
+                      style={{ color: 'var(--header-text)' }}
                     >
-                      <Building className="h-4 w-4" />
-                      Dashboard
-                    </button>
-                    <button
-                      onClick={() => {
-                        onLogout();
-                        setShowMobileMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2 text-red-200"
+                      {user.name}
+                    </p>
+                    <p 
+                      className="text-sm"
+                      style={{ color: 'var(--text-secondary)' }}
                     >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </button>
-                  </>
-                ) : !isLoadingUser ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        router.push('/login');
-                        setShowMobileMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      Sign In
-                    </button>
-                    <button
+                      {user.email}
+                    </p>
+                  </div>
+                  
+                  {/* Dashboard */}
+                  <button
+                    onClick={() => {
+                      router.push('/dashboard');
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--header-text)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-ghost-hover-bg)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Building className="h-4 w-4" />
+                    Dashboard
+                  </button>
+                  
+                  {/* Sign Out */}
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--error)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-ghost-hover-bg)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </>
+              ) : !isLoadingUser ? (
+                <>
+                  {/* Sign In */}
+                  <button
+                    onClick={() => {
+                      router.push('/login');
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--header-text)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-ghost-hover-bg)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Sign In
+                  </button>
+                  
+                  {/* Get Started */}
+                  <div className="pt-2">
+                    <Button
+                      variant="primary"
                       onClick={() => {
                         router.push('/register');
                         setShowMobileMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
+                      icon={<UserPlus className="h-4 w-4" />}
+                      className="w-full justify-center"
                     >
-                      <UserPlus className="h-4 w-4" />
-                      Register
-                    </button>
-                  </>
-                ) : null}
-              </div>
+                      Get Started
+                    </Button>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         )}
-      </div>
+      </header>
+
+      {/* Spacer to prevent content from hiding under fixed header */}
+      <div className="h-16" />
     </>
   );
 };

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Loader2, Sparkles, Zap } from 'lucide-react';
+import { Check, X, Loader2, Sparkles, Zap, Crown } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { useAuthContext } from '@/providers/AuthProvider';
+import Button from '@/components/button';
+import LinkButton from '@/components/linkButton';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -170,30 +172,44 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <PageWrapper showFooter={false} className="min-h-screen bg-gradient-to-br from-[#667EEA] to-indigo-800">
+      <PageWrapper showFooter={false} className="min-h-screen" style={{ backgroundColor: 'var(--background-secondary)' }}>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--primary-color)' }} />
         </div>
       </PageWrapper>
     );
   }
 
   return (
-    <PageWrapper showFooter={true} className="min-h-screen bg-gradient-to-br from-[#667EEA] to-indigo-800 px-4 py-8">
+    <PageWrapper showFooter={true} className="min-h-screen px-4 py-8" style={{ backgroundColor: 'var(--background-secondary)' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 mt-8">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 
+            className="text-4xl md:text-5xl font-bold mb-4"
+            style={{ color: 'var(--foreground)' }}
+          >
             Choose Your Plan
           </h2>
-          <p className="text-xl text-purple-100 max-w-2xl mx-auto">
+          <p 
+            className="text-xl max-w-2xl mx-auto"
+            style={{ color: 'var(--text-secondary)' }}
+          >
             Start for free, upgrade when you need more power
           </p>
           
           {user && usage && (
-            <div className="mt-6 bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 max-w-md mx-auto">
-              <p className="text-white font-semibold mb-2">Your Current Usage</p>
-              <div className="text-sm text-purple-100 space-y-1">
+            <div 
+              className="mt-6 rounded-xl border p-4 max-w-md mx-auto shadow-md"
+              style={{ 
+                backgroundColor: 'var(--primary-lightest)',
+                borderColor: 'var(--primary-lighter)'
+              }}
+            >
+              <p className="font-semibold mb-2" style={{ color: 'var(--primary-active)' }}>
+                Your Current Usage
+              </p>
+              <div className="text-sm space-y-1" style={{ color: 'var(--primary-active)' }}>
                 <p>Simple Emails: {usage.simple_emails_used}/{usage.simple_emails_limit}</p>
                 {/* <p>Personalized: {usage.personalized_emails_used}/{usage.personalized_emails_limit}</p> */}
               </div>
@@ -213,14 +229,26 @@ export default function PricingPage() {
                 key={plan.id}
                 className={`relative rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${
                   isPro
-                    ? 'bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-2 border-pink-400/50'
-                    : 'bg-white/10 border-2 border-white/20'
-                } backdrop-blur-lg`}
+                    ? 'shadow-2xl'
+                    : 'shadow-lg'
+                }`}
+                style={{
+                  backgroundColor: isPro ? 'var(--primary-color)' : 'white',
+                  borderWidth: '2px',
+                  borderStyle: 'solid',
+                  borderColor: isPro ? 'var(--primary-hover)' : 'var(--border-light)'
+                }}
               >
                 {/* Popular Badge */}
                 {isPro && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-lg">
+                    <span 
+                      className="px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-lg"
+                      style={{ 
+                        backgroundColor: 'var(--warning)',
+                        color: 'white'
+                      }}
+                    >
                       <Sparkles className="w-4 h-4" />
                       Most Popular
                     </span>
@@ -230,23 +258,36 @@ export default function PricingPage() {
                 {/* Current Plan Badge */}
                 {isPlanCurrent && (
                   <div className="absolute -top-4 right-4">
-                    <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                      ✓ Active
+                    <span 
+                      className="px-3 py-1 rounded-full text-sm font-semibold shadow-lg flex items-center gap-1"
+                      style={{ 
+                        backgroundColor: 'var(--success)',
+                        color: 'white'
+                      }}
+                    >
+                      <Check className="w-3 h-3" />
+                      Active
                     </span>
                   </div>
                 )}
 
                 {/* Plan Header */}
                 <div className="mb-6">
-                  <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                  <h3 
+                    className="text-2xl font-bold mb-2 flex items-center gap-2"
+                    style={{ color: isPro ? 'white' : 'var(--foreground)' }}
+                  >
                     {plan.name}
-                    {isPro && <Zap className="w-6 h-6 text-yellow-300" />}
+                    {isPro && <Crown className="w-6 h-6 text-yellow-300" />}
                   </h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-5xl font-bold text-white">
+                    <span 
+                      className="text-5xl font-bold"
+                      style={{ color: isPro ? 'white' : 'var(--foreground)' }}
+                    >
                       ${parseFloat(plan.price).toFixed(0)}
                     </span>
-                    <span className="text-purple-200">
+                    <span style={{ color: isPro ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>
                       /{plan.billing_cycle}
                     </span>
                   </div>
@@ -257,14 +298,23 @@ export default function PricingPage() {
                   {features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
                       {feature.included ? (
-                        <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        <Check 
+                          className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                          style={{ color: isPro ? '#86efac' : 'var(--success)' }}
+                        />
                       ) : (
-                        <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <X 
+                          className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                          style={{ color: isPro ? 'rgba(255,255,255,0.5)' : 'var(--error)' }}
+                        />
                       )}
                       <span
-                        className={`text-sm ${
-                          feature.included ? 'text-white' : 'text-purple-300'
-                        } ${feature.highlight ? 'font-semibold' : ''}`}
+                        className={`text-sm ${feature.highlight ? 'font-semibold' : ''}`}
+                        style={{ 
+                          color: feature.included 
+                            ? (isPro ? 'white' : 'var(--foreground)') 
+                            : (isPro ? 'rgba(255,255,255,0.6)' : 'var(--text-tertiary)')
+                        }}
                       >
                         {feature.text}
                       </span>
@@ -276,13 +326,26 @@ export default function PricingPage() {
                 <button
                   onClick={() => handlePlanAction(plan)}
                   disabled={isPlanCurrent || upgrading === plan.id}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all ${
+                  className={`w-full py-3 px-6 rounded-xl font-semibold transition-all ${
                     isPlanCurrent
-                      ? 'bg-gray-500 cursor-not-allowed opacity-60'
-                      : isPro
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg hover:shadow-xl'
-                      : 'bg-white/20 hover:bg-white/30 border border-white/30'
+                      ? 'opacity-60 cursor-not-allowed'
+                      : 'hover:shadow-lg'
                   } ${upgrading === plan.id ? 'opacity-50 cursor-wait' : ''}`}
+                  style={{
+                    backgroundColor: isPlanCurrent 
+                      ? 'var(--gray-400)' 
+                      : isPro 
+                      ? 'white' 
+                      : 'var(--primary-color)',
+                    color: isPlanCurrent 
+                      ? 'white' 
+                      : isPro 
+                      ? 'var(--primary-color)' 
+                      : 'white',
+                    borderWidth: isPro ? '0' : '2px',
+                    borderStyle: 'solid',
+                    borderColor: isPro ? 'transparent' : 'var(--primary-hover)'
+                  }}
                 >
                   {upgrading === plan.id ? (
                     <span className="flex items-center justify-center gap-2">
@@ -299,18 +362,20 @@ export default function PricingPage() {
         </div>
 
         {/* Additional Info */}
-        <div className="text-center text-purple-100 space-y-4">
-          <p className="text-lg">
+        <div className="text-center space-y-4">
+          <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
             All plans include access to multiple AI providers and email history
           </p>
-          <p className="text-sm text-purple-200">
-            Need help choosing? {' '}
-            <button 
-              onClick={() => router.push('/contact')} 
-              className="text-pink-300 hover:text-pink-200 underline"
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            Need help choosing?{' '}
+            <LinkButton 
+              href="/contact" 
+              variant="text"
+              className="font-medium"
+              style={{ color: 'var(--primary-color)' }}
             >
               Contact our team
-            </button>
+            </LinkButton>
           </p>
         </div>
       </div>

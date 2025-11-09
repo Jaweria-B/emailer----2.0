@@ -7,6 +7,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/providers/AuthProvider';
 import PageWrapper from '@/components/PageWrapper';
+import Button from '@/components/button';
+import LinkButton from '@/components/linkButton';
 
 const Dashboard = () => {
   const { user, isLoadingUser, handleLogout: contextLogout } = useAuthContext();
@@ -121,10 +123,10 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667EEA] to-[#764BA2] flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--primary-color)' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading dashboard...</p>
         </div>
       </div>
     );
@@ -137,211 +139,307 @@ const Dashboard = () => {
 
   return (
     <PageWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-[#667EEA] to-indigo-800">
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--background-secondary)' }}>
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
             <div className="flex items-center gap-3 md:gap-4">
-              <div className="bg-white/20 backdrop-blur-lg rounded-full p-2 md:p-3 border border-white/30">
+              <div 
+                className="rounded-full p-2 md:p-3 shadow-md"
+                style={{ backgroundColor: 'var(--primary-color)' }}
+              >
                 <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
               </div>
-              <div className="text-white">
-                <h1 className="text-xl md:text-3xl font-bold">Welcome back, {user?.name}!</h1>
-                <p className="text-sm md:text-base text-purple-200 truncate max-w-[200px] md:max-w-none">{user?.email}</p>
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+                  Welcome back, {user?.name}!
+                </h1>
+                <p className="text-sm md:text-base truncate max-w-[200px] md:max-w-none" style={{ color: 'var(--text-secondary)' }}>
+                  {user?.email}
+                </p>
               </div>
             </div>
             <div className="flex gap-2 md:gap-3">
-              <button
+              <Button
                 onClick={() => router.push('/')}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl transition-all duration-300 flex items-center gap-2 font-medium text-sm md:text-base"
+                variant="primary"
+                icon={<MessageSquare className="h-4 w-4 md:h-5 md:w-5" />}
+                className="text-sm md:text-base"
               >
-                <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
                 <span className="">Create Email</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleLogout}
-                className="bg-white/20 backdrop-blur-lg text-white px-3 md:px-4 py-2 md:py-3 rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center gap-2 text-sm md:text-base"
+                variant="ghost"
+                icon={<LogOut className="h-4 w-4" />}
+                className="text-sm md:text-base"
               >
-                <LogOut className="h-4 w-4" />
                 <span className="">Sign Out</span>
-              </button>
+              </Button>
             </div>
           </div>
+
           {/* Warning Banners */}
           {/* {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
             <div className="mb-4 sm:mb-6 space-y-3">
               {showSimpleWarning && usageData.simple_emails_remaining > 0 && (
-                <div className="bg-yellow-500/20 backdrop-blur-lg border border-yellow-500/40 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <div 
+                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                  style={{ 
+                    backgroundColor: 'var(--warning-light)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'var(--warning)'
+                  }}
+                >
+                  <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
                   <div className="flex-1">
-                    <p className="text-yellow-100 font-medium text-sm sm:text-base">
+                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--warning)' }}>
                       Running low on simple emails! Only {usageData.simple_emails_remaining} remaining this month.
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={() => router.push('/pricing')}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm w-full sm:w-auto"
+                    variant="primary"
+                    size="sm"
+                    className="w-full sm:w-auto"
                   >
                     Upgrade Now
-                  </button>
+                  </Button>
                 </div>
               )}
               
               {usageData && usageData.simple_emails_remaining === 0 && (
-                <div className="bg-red-500/20 backdrop-blur-lg border border-red-500/40 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-300 flex-shrink-0" />
+                <div 
+                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                  style={{ 
+                    backgroundColor: 'var(--error-light)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'var(--error)'
+                  }}
+                >
+                  <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--error)' }} />
                   <div className="flex-1">
-                    <p className="text-red-100 font-medium text-sm sm:text-base">
+                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--error)' }}>
                       You've reached your simple email limit for this month!
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={() => router.push('/pricing')}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm w-full sm:w-auto"
+                    variant="primary"
+                    size="sm"
+                    className="w-full sm:w-auto"
                   >
                     Upgrade Now
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {usageData && usageData.personalized_emails_limit === 0 && subscriptionData?.plan_name === 'Free' && (
-                <div className="bg-blue-500/20 backdrop-blur-lg border border-blue-500/40 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <Crown className="h-5 w-5 text-blue-300 flex-shrink-0" />
+                <div 
+                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                  style={{ 
+                    backgroundColor: 'var(--primary-lightest)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'var(--primary-lighter)'
+                  }}
+                >
+                  <Crown className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--primary-color)' }} />
                   <div className="flex-1">
-                    <p className="text-blue-100 font-medium text-sm sm:text-base">
+                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--primary-active)' }}>
                       Upgrade to Pro to unlock 100 personalized emails per month!
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={() => router.push('/pricing')}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
+                    variant="primary"
+                    icon={<Crown className="h-4 w-4" />}
+                    size="sm"
+                    className="w-full sm:w-auto"
                   >
-                    <Crown className="h-4 w-4" />
                     Go Pro
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
           )} */}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Simple Emails Card */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Mail className="h-6 w-6 sm:h-8 sm:w-8 text-blue-300" />
+            <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--primary-lightest)' }}>
+                  <Mail className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--primary-color)' }} />
+                </div>
                 <div>
-                  <p className="text-purple-200 text-xs sm:text-sm">Simple Emails</p>
-                  <p className="text-white text-xl sm:text-2xl font-bold">
+                  <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Simple Emails
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
                     {usageData ? `${usageData.simple_emails_used}/${usageData.simple_emails_limit}` : '0/0'}
                   </p>
                 </div>
               </div>
+              <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {usageData ? `${usageData.simple_emails_remaining} remaining` : 'No data'}
+                </p>
+              </div>
             </div>
 
-            {/* Personalized Emails Card */}
-            {/* <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-300" />
+            {/* Personalized Emails Card - Commented out but keeping structure */}
+            {/* <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#fef3c7' }}>
+                  <Zap className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#f59e0b' }} />
+                </div>
                 <div>
-                  <p className="text-purple-200 text-xs sm:text-sm">Personalized</p>
-                  <p className="text-white text-xl sm:text-2xl font-bold">
+                  <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Personalized
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
                     {usageData ? `${usageData.personalized_emails_used}/${usageData.personalized_emails_limit}` : '0/0'}
                   </p>
                 </div>
               </div>
+              <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No data'}
+                </p>
+              </div>
             </div> */}
 
             {/* Current Plan Card */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Crown className="h-6 w-6 sm:h-8 sm:w-8 text-purple-300" />
+            <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#f3e8ff' }}>
+                  <Crown className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#9333ea' }} />
+                </div>
                 <div>
-                  <p className="text-purple-200 text-xs sm:text-sm">Current Plan</p>
-                  <p className="text-white text-xl sm:text-2xl font-bold">{subscriptionData?.plan_name || 'Free'}</p>
+                  <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Current Plan
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
+                    {subscriptionData?.plan_name || 'Free'}
+                  </p>
                 </div>
               </div>
+              {subscriptionData?.plan_name === 'Free' && (
+                <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
+                  <LinkButton
+                    href="/pricing"
+                    variant="text"
+                    className="text-xs font-medium"
+                    style={{ color: 'var(--primary-color)' }}
+                    iconRight={<ArrowRight className="h-3 w-3" />}
+                  >
+                    Upgrade to Pro
+                  </LinkButton>
+                </div>
+              )}
             </div>
 
             {/* This Month Card */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-green-300" />
-                <div>
-                  <p className="text-purple-200 text-xs sm:text-sm">This Month</p>
-                  <p className="text-white text-xl sm:text-2xl font-bold">{stats.emailsThisMonth}</p>
+            <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#d1fae5' }}>
+                  <Calendar className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#10b981' }} />
                 </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    This Month
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
+                    {stats.emailsThisMonth}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Emails generated
+                </p>
               </div>
             </div>
           </div>
 
           {/* Subscription Overview */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 mb-6 sm:mb-8" style={{ borderColor: 'var(--border-light)' }}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
-              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-3">
-                <Activity className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+                <Activity className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--primary-color)' }} />
                 Subscription Overview
               </h2>
-              <button
+              <Button
                 onClick={() => router.push('/pricing')}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm w-full sm:w-auto justify-center"
+                variant="primary"
+                size="sm"
+                iconRight={<ArrowRight className="h-4 w-4" />}
+                className="w-full sm:w-auto"
               >
                 View Plans
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 sm:gap-6">
               {/* Simple Emails Progress */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-purple-200 font-medium text-sm sm:text-base">Simple Emails</span>
-                  <span className="text-white font-bold text-sm sm:text-base">
+                  <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                    Simple Emails
+                  </span>
+                  <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
                     {usageData ? `${usageData.simple_emails_used} / ${usageData.simple_emails_limit}` : '0 / 0'}
                   </span>
                 </div>
-                <div className="bg-white/10 rounded-full h-2 sm:h-3 overflow-hidden">
+                <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
                   <div
-                    className={`h-full transition-all duration-500 ${
-                      simplePercentage >= 80 ? 'bg-red-500' : simplePercentage >= 50 ? 'bg-yellow-500' : 'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(simplePercentage, 100)}%` }}
+                    className="h-full transition-all duration-500 rounded-full"
+                    style={{ 
+                      width: `${Math.min(simplePercentage, 100)}%`,
+                      backgroundColor: simplePercentage >= 80 ? 'var(--error)' : simplePercentage >= 50 ? 'var(--warning)' : 'var(--success)'
+                    }}
                   />
                 </div>
-                <p className="text-purple-300 text-xs sm:text-sm mt-2">
+                <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
                   {usageData ? `${usageData.simple_emails_remaining} remaining` : 'No limit data'}
                 </p>
               </div>
 
-              {/* Personalized Emails Progress */}
+              {/* Personalized Emails Progress - Commented out */}
               {/* <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-purple-200 font-medium text-sm sm:text-base">Personalized Emails</span>
-                  <span className="text-white font-bold text-sm sm:text-base">
+                  <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                    Personalized Emails
+                  </span>
+                  <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
                     {usageData ? `${usageData.personalized_emails_used} / ${usageData.personalized_emails_limit}` : '0 / 0'}
                   </span>
                 </div>
-                <div className="bg-white/10 rounded-full h-2 sm:h-3 overflow-hidden">
+                <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
                   <div
-                    className={`h-full transition-all duration-500 ${
-                      usageData && usageData.personalized_emails_limit === 0 
-                        ? 'bg-gray-500' 
+                    className="h-full transition-all duration-500 rounded-full"
+                    style={{ 
+                      width: usageData && usageData.personalized_emails_limit === 0 ? '0%' : `${Math.min(personalizedPercentage, 100)}%`,
+                      backgroundColor: usageData && usageData.personalized_emails_limit === 0 
+                        ? 'var(--gray-400)' 
                         : personalizedPercentage >= 80 
-                        ? 'bg-red-500' 
+                        ? 'var(--error)' 
                         : personalizedPercentage >= 50 
-                        ? 'bg-yellow-500' 
-                        : 'bg-green-500'
-                    }`}
-                    style={{ width: usageData && usageData.personalized_emails_limit === 0 ? '0%' : `${Math.min(personalizedPercentage, 100)}%` }}
+                        ? 'var(--warning)' 
+                        : 'var(--success)'
+                    }}
                   />
                 </div>
                 {usageData && usageData.personalized_emails_limit === 0 ? (
-                  <p className="text-purple-300 text-xs sm:text-sm mt-2 flex items-center gap-1">
+                  <p className="text-xs sm:text-sm mt-2 flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
                     <Crown className="h-3 w-3" />
                     Upgrade to Pro to unlock
                   </p>
                 ) : (
-                  <p className="text-purple-300 text-xs sm:text-sm mt-2">
+                  <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
                     {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No limit data'}
                   </p>
                 )}
@@ -349,67 +447,96 @@ const Dashboard = () => {
             </div>
 
             {/* Plan Details */}
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/20">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <p className="text-purple-200 text-xs sm:text-sm mb-1">Billing Period</p>
-                  <p className="text-white font-medium text-sm sm:text-base">
+                  <p className="text-xs sm:text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    Billing Period
+                  </p>
+                  <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
                     Resets on {usageData ? new Date(usageData.period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
                 {subscriptionData?.plan_name === 'Free' && (
-                  <button
+                  <Button
                     onClick={() => router.push('/pricing')}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+                    variant="primary"
+                    icon={<Crown className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    className="w-full sm:w-auto"
                   >
-                    <Crown className="h-4 w-4 sm:h-5 sm:w-5" />
                     Upgrade to Pro
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
           </div>
+
           {/* Email History */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-              <Mail className="h-6 w-6" />
+          <div className="bg-white rounded-xl border shadow-lg p-6" style={{ borderColor: 'var(--border-light)' }}>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+              <Mail className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
               Recent Emails
             </h2>
 
             {emailHistory.length > 0 ? (
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {emailHistory.map((email) => (
-                  <div key={email.id} className="bg-white/10 rounded-lg p-4 border border-white/20">
+                  <div 
+                    key={email.id} 
+                    className="rounded-lg p-4 border hover:shadow-md transition-shadow"
+                    style={{ 
+                      backgroundColor: 'var(--background-secondary)',
+                      borderColor: 'var(--border-light)'
+                    }}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <h3 className="text-white font-medium text-lg mb-1">
+                        <h3 className="font-medium text-lg mb-1" style={{ color: 'var(--foreground)' }}>
                           {email.email_subject || 'Untitled Email'}
                         </h3>
                         <div className="flex flex-wrap gap-2 mb-2">
-                          <span className="bg-purple-500/30 text-purple-200 px-2 py-1 rounded-full text-xs">
+                          <span 
+                            className="px-2 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: 'var(--primary-lightest)',
+                              color: 'var(--primary-active)'
+                            }}
+                          >
                             {email.tone}
                           </span>
-                          <span className="bg-blue-500/30 text-blue-200 px-2 py-1 rounded-full text-xs">
+                          <span 
+                            className="px-2 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af'
+                            }}
+                          >
                             {email.ai_provider}
                           </span>
-                          <span className="bg-green-500/30 text-green-200 px-2 py-1 rounded-full text-xs">
+                          <span 
+                            className="px-2 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: 'var(--success-light)',
+                              color: 'var(--success)'
+                            }}
+                          >
                             {email.status}
                           </span>
                         </div>
                         {email.recipient && (
-                          <p className="text-purple-200 text-sm mb-2">
+                          <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                             To: {email.recipient}
                           </p>
                         )}
                       </div>
-                      <div className="text-purple-300 text-sm whitespace-nowrap ml-4">
+                      <div className="text-sm whitespace-nowrap ml-4" style={{ color: 'var(--text-tertiary)' }}>
                         {formatDate(email.created_at)}
                       </div>
                     </div>
                     
                     {email.email_body && (
-                      <div className="bg-white/10 rounded-lg p-3 mt-3">
-                        <p className="text-purple-100 text-sm leading-relaxed">
+                      <div className="rounded-lg p-3 mt-3" style={{ backgroundColor: 'var(--background)' }}>
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                           {email.email_body.length > 200 
                             ? email.email_body.substring(0, 200) + '...' 
                             : email.email_body
@@ -422,15 +549,20 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Mail className="h-16 w-16 text-purple-300 mx-auto mb-4 opacity-50" />
-                <p className="text-purple-200 text-lg">No emails generated yet</p>
-                <p className="text-purple-300 text-sm">Start creating your first email!</p>
-                <button
+                <Mail className="h-16 w-16 mx-auto mb-4 opacity-30" style={{ color: 'var(--text-tertiary)' }} />
+                <p className="text-lg mb-1" style={{ color: 'var(--foreground)' }}>
+                  No emails generated yet
+                </p>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  Start creating your first email!
+                </p>
+                <Button
                   onClick={() => router.push('/')}
-                  className="mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-6 py-2 rounded-xl transition-all duration-300"
+                  variant="primary"
+                  icon={<MessageSquare className="h-5 w-5" />}
                 >
                   Create First Email
-                </button>
+                </Button>
               </div>
             )}
           </div>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { Mail, Check, X, RefreshCw, Shield } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/providers/AuthProvider';
+import Button from '@/components/button';
 
 function VerifyEmailContent() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -126,41 +127,93 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667EEA] to-[#764BA2] flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--background-secondary)' }}
+    >
+      <div 
+        className="bg-white rounded-2xl border shadow-xl w-full max-w-md p-8"
+        style={{ borderColor: 'var(--border-light)' }}
+      >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="bg-white/20 backdrop-blur-lg rounded-full p-4 border border-white/30 w-fit mx-auto mb-4">
+          <div 
+            className="rounded-lg p-4 w-fit mx-auto mb-4 shadow-md"
+            style={{ backgroundColor: 'var(--primary-color)' }}
+          >
             <Mail className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 
+            className="text-3xl font-bold mb-2"
+            style={{ color: 'var(--foreground)' }}
+          >
             {isLogin ? 'Verify Login' : 'Verify Your Email'}
           </h1>
-          <p className="text-purple-100">
+          <p style={{ color: 'var(--text-secondary)' }}>
             We've sent a 6-digit code to
           </p>
-          <p className="text-white font-medium mt-1">{email}</p>
+          <p 
+            className="font-medium mt-1"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {email}
+          </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-6 flex items-start gap-2">
-            <X className="h-5 w-5 text-red-300 flex-shrink-0 mt-0.5" />
-            <p className="text-red-200 text-sm">{error}</p>
+          <div 
+            className="rounded-xl p-3 mb-6 flex items-start gap-2"
+            style={{ 
+              backgroundColor: 'var(--error-light)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'var(--error)'
+            }}
+          >
+            <X 
+              className="h-5 w-5 flex-shrink-0 mt-0.5"
+              style={{ color: 'var(--error)' }}
+            />
+            <p 
+              className="text-sm"
+              style={{ color: 'var(--error)' }}
+            >
+              {error}
+            </p>
           </div>
         )}
 
         {/* Success Message */}
         {resendSuccess && (
-          <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3 mb-6 flex items-start gap-2">
-            <Check className="h-5 w-5 text-green-300 flex-shrink-0 mt-0.5" />
-            <p className="text-green-200 text-sm">New verification code sent!</p>
+          <div 
+            className="rounded-xl p-3 mb-6 flex items-start gap-2"
+            style={{ 
+              backgroundColor: 'var(--success-light)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'var(--success)'
+            }}
+          >
+            <Check 
+              className="h-5 w-5 flex-shrink-0 mt-0.5"
+              style={{ color: 'var(--success)' }}
+            />
+            <p 
+              className="text-sm"
+              style={{ color: 'var(--success)' }}
+            >
+              New verification code sent!
+            </p>
           </div>
         )}
 
         {/* Code Input */}
         <div className="mb-6">
-          <label className="block text-purple-100 text-sm font-medium mb-3 text-center">
+          <label 
+            className="block text-sm font-medium mb-3 text-center"
+            style={{ color: 'var(--foreground)' }}
+          >
             Enter Verification Code
           </label>
           <div className="flex justify-center gap-2 mb-4">
@@ -174,40 +227,48 @@ function VerifyEmailContent() {
                 onChange={(e) => handleCodeChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="w-12 h-14 bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl text-white text-2xl text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                className="w-12 h-14 border rounded-xl text-2xl text-center font-bold focus:outline-none focus:ring-2 transition-all"
+                style={{ 
+                  backgroundColor: 'var(--background)',
+                  borderColor: 'var(--border-medium)',
+                  color: 'var(--foreground)',
+                  '--tw-ring-color': 'var(--primary-color)'
+                }}
               />
             ))}
           </div>
-          <p className="text-purple-200 text-xs text-center">
+          <p 
+            className="text-xs text-center"
+            style={{ color: 'var(--text-secondary)' }}
+          >
             Code expires in 15 minutes
           </p>
         </div>
 
         {/* Verify Button */}
-        <button
+        <Button
           onClick={handleVerify}
           disabled={isLoading || code.join('').length !== 6}
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 mb-4"
-        >
-          {isLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Verifying...
-            </>
+          variant="primary"
+          className="w-full mb-4"
+          icon={isLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
           ) : (
-            <>
-              <Check className="h-5 w-5" />
-              Verify {isLogin ? 'Login' : 'Email'}
-            </>
+            <Check className="h-5 w-5" />
           )}
-        </button>
+        >
+          {isLoading ? 'Verifying...' : `Verify ${isLogin ? 'Login' : 'Email'}`}
+        </Button>
 
         {/* Resend Code */}
         <div className="text-center">
           <button
             onClick={handleResend}
             disabled={isResending}
-            className="text-purple-200 hover:text-white text-sm font-medium flex items-center justify-center gap-2 mx-auto transition-colors disabled:opacity-50"
+            className="text-sm font-medium flex items-center justify-center gap-2 mx-auto transition-colors disabled:opacity-50"
+            style={{ 
+              color: isResending ? 'var(--text-tertiary)' : 'var(--primary-color)'
+            }}
           >
             <RefreshCw className={`h-4 w-4 ${isResending ? 'animate-spin' : ''}`} />
             {isResending ? 'Sending...' : 'Resend Code'}
@@ -221,17 +282,34 @@ function VerifyEmailContent() {
 
 // Loading component for Suspense fallback
 const VerifyEmailLoading = () => (
-  <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center p-4">
-    <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl w-full max-w-md">
+  <div 
+    className="min-h-screen flex items-center justify-center p-4"
+    style={{ backgroundColor: 'var(--background-secondary)' }}
+  >
+    <div 
+      className="bg-white rounded-2xl border shadow-xl w-full max-w-md p-8"
+      style={{ borderColor: 'var(--border-light)' }}
+    >
       <div className="text-center">
-        <div className="bg-white/20 backdrop-blur-lg rounded-full p-4 border border-white/30 w-fit mx-auto mb-4">
+        <div 
+          className="rounded-full p-4 w-fit mx-auto mb-4 shadow-md"
+          style={{ backgroundColor: 'var(--primary-color)' }}
+        >
           <Shield className="h-8 w-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-4">
+        <h1 
+          className="text-3xl font-bold mb-4"
+          style={{ color: 'var(--foreground)' }}
+        >
           Verify Your Email
         </h1>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-        <p className="text-purple-100 text-sm mt-4">Loading...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: 'var(--primary-color)' }}></div>
+        <p 
+          className="text-sm mt-4"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Loading...
+        </p>
       </div>
     </div>
   </div>

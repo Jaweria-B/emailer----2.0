@@ -308,13 +308,13 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                         }, 1000);
                     }}
                 />
-                {showSenderFeedback && (
+                {/* {showSenderFeedback && (
                     <EmailSenderFeedback
                         onClose={() => setShowSenderFeedback(false)}
                         emailSent={emailSent}
                         onSubmit={handleSenderFeedback}
                     />
-                )}
+                )} */}
             </>
         );
     }
@@ -711,14 +711,14 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                 </p>
             </div>
             
-            {showGenerationFeedback && (
+            {/* {showGenerationFeedback && (
                 <EmailGenerationFeedback
                     onClose={() => setShowGenerationFeedback(false)}
                     emailData={generatedEmail}
                     provider={selectedProvider}
                     onSubmit={handleGenerationFeedback}
                 />
-            )}
+            )} */}
             {/* <FloatingGenerationGuide /> */}
             {/* Upgrade Modal */}
             {showUpgradeModal && (

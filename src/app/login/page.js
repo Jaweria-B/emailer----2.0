@@ -96,7 +96,7 @@ const LoginPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label 
-              className="block text-sm font-semibold mb-2 flex items-center gap-2"
+              className="text-sm font-semibold mb-2 flex items-center gap-2"
               style={{ color: 'var(--foreground)' }}
             >
               <User className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />

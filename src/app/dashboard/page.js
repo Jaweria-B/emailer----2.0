@@ -334,9 +334,9 @@ const Dashboard = () => {
                     variant="text"
                     className="text-xs font-medium"
                     style={{ color: 'var(--primary-color)' }}
-                    iconRight={<ArrowRight className="h-3 w-3" />}
                   >
                     Upgrade to Pro
+                    {<ArrowRight className="h-3 w-3" />}
                   </LinkButton>
                 </div>
               )}
@@ -376,10 +376,10 @@ const Dashboard = () => {
                 onClick={() => router.push('/pricing')}
                 variant="primary"
                 size="sm"
-                iconRight={<ArrowRight className="h-4 w-4" />}
                 className="w-full sm:w-auto"
               >
                 View Plans
+                {<ArrowRight className="h-4 w-4" />}
               </Button>
             </div>
 

@@ -96,7 +96,7 @@ const Register = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label 
-              className="block text-sm font-semibold mb-2 flex items-center gap-2"
+              className="text-sm font-semibold mb-2 flex items-center gap-2"
               style={{ color: 'var(--foreground)' }}
             >
               <User className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />
@@ -120,7 +120,7 @@ const Register = () => {
 
           <div>
             <label 
-              className="block text-sm font-semibold mb-2 flex items-center gap-2"
+              className="text-sm font-semibold mb-2 flex items-center gap-2"
               style={{ color: 'var(--foreground)' }}
             >
               <Mail className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />
@@ -144,7 +144,7 @@ const Register = () => {
 
           <div>
             <label 
-              className="block text-sm font-semibold mb-2 flex items-center gap-2"
+              className="text-sm font-semibold mb-2 flex items-center gap-2"
               style={{ color: 'var(--foreground)' }}
             >
               <Building className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />
@@ -167,7 +167,7 @@ const Register = () => {
 
           <div>
             <label 
-              className="block text-sm font-semibold mb-2 flex items-center gap-2"
+              className="text-sm font-semibold mb-2 flex items-center gap-2"
               style={{ color: 'var(--foreground)' }}
             >
               <Briefcase className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />

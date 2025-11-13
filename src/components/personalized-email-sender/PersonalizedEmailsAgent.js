@@ -29,6 +29,8 @@ import {
 import { useRouter } from 'next/navigation';
 import UsageWidget from '@/components/UsageWidget';
 import UpgradeModal from '@/components/UpgradeModal';
+import Button from '@/components/button';
+import LinkButton from '@/components/linkButton';
 
 const BulkEmailAgent = ({ user, onLogout, isLoadingUser }) => {
   const router = useRouter();
@@ -399,6 +401,7 @@ Generate both subject line and email body. Make sure both are complete and profe
     // Refresh subscription data to show updated usage
     await fetchSubscriptionData();
   };
+
   // Send emails
   const sendBulkEmails = async () => {
     const successfulEmails = generatedEmails.filter(email => email.status === 'generated');
@@ -603,9 +606,9 @@ Generate both subject line and email body. Make sure both are complete and profe
 
   // Modified renderUploadStep function
   const renderUploadStep = () => (
-    <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-        <Upload className="h-6 w-6" />
+    <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+        <Upload className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
         Upload Contact List
       </h2>
 
@@ -622,7 +625,10 @@ Generate both subject line and email body. Make sure both are complete and profe
       )}
        */}
       <div className="space-y-6">
-        <div className="border-2 border-dashed border-white/30 rounded-xl p-8 text-center hover:border-white/50 transition-colors">
+        <div 
+          className="border-2 border-dashed rounded-xl p-8 text-center hover:border-opacity-70 transition-colors cursor-pointer"
+          style={{ borderColor: 'var(--border-medium)' }}
+        >
           <input
             type="file"
             accept=".csv"
@@ -631,9 +637,11 @@ Generate both subject line and email body. Make sure both are complete and profe
             id="csv-upload"
           />
           <label htmlFor="csv-upload" className="cursor-pointer">
-            <FileText className="h-16 w-16 text-white/50 mx-auto mb-4" />
-            <p className="text-white text-lg mb-2">Upload your CSV file</p>
-            <p className="text-purple-200 text-sm">
+            <FileText className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
+            <p className="text-lg mb-2" style={{ color: 'var(--foreground)' }}>
+              Upload your CSV file
+            </p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Include columns for email, name, company, role, and any additional info
             </p>
           </label>
@@ -641,33 +649,33 @@ Generate both subject line and email body. Make sure both are complete and profe
 
         {/* Download Dummy Data Button */}
         <div className="flex justify-center">
-          <button
+          <Button
             onClick={downloadDummyData}
-            className="bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/20 hover:border-white/30 transition-all duration-300 flex items-center gap-2"
+            variant="ghost"
+            icon={<Download className="h-5 w-5" />}
           >
-            <Download className="h-5 w-5" />
             Download Sample CSV
-          </button>
+          </Button>
         </div>
 
         {csvData.length > 0 && (
-          <div className="bg-white/10 rounded-xl p-4">
-            <p className="text-white font-semibold mb-2">
+          <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--success-light)' }}>
+            <p className="font-semibold mb-2" style={{ color: 'var(--success)' }}>
               ✅ {csvData.length} contacts loaded
             </p>
-            <p className="text-purple-200 text-sm mb-4">
+            <p className="text-sm mb-4" style={{ color: 'var(--success)' }}>
               Headers: {csvHeaders.join(', ')}
             </p>
             
             {/* Next Button */}
             <div className="flex justify-end">
-              <button
+              <Button
                 onClick={() => setCurrentStep(2)}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center gap-2"
+                variant="primary"
+                iconRight={<ArrowRight className="h-5 w-5" />}
               >
                 Next: Configure Agent
-                <ArrowRight className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -678,15 +686,15 @@ Generate both subject line and email body. Make sure both are complete and profe
   const renderConfigureStep = () => (
     <div className="space-y-6">
       {/* Sender Information */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <UserCircle className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <UserCircle className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Sender Information
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Your Name
             </label>
             <input
@@ -694,12 +702,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.name}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, name: e.target.value }))}
               placeholder="John Smith"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Job Title
             </label>
             <input
@@ -707,12 +721,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.title}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, title: e.target.value }))}
               placeholder="CEO, Marketing Director, etc."
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Company Name
             </label>
             <input
@@ -720,12 +740,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.company}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, company: e.target.value }))}
               placeholder="Your Company Ltd."
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Industry
             </label>
             <input
@@ -733,12 +759,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.industry}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, industry: e.target.value }))}
               placeholder="Technology, Finance, Healthcare, etc."
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Brief Bio/Description
             </label>
             <textarea
@@ -746,12 +778,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               onChange={(e) => setSenderInfo(prev => ({ ...prev, bio: e.target.value }))}
               placeholder="Brief description about yourself or your role..."
               rows={3}
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Key Expertise/Skills
             </label>
             <input
@@ -759,12 +797,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.expertise}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, expertise: e.target.value }))}
               placeholder="AI, Digital Marketing, Product Development, etc."
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Key Achievements (Optional)
             </label>
             <input
@@ -772,40 +816,60 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={senderInfo.achievements}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, achievements: e.target.value }))}
               placeholder="Awards, certifications, notable projects, etc."
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
         </div>
 
-        <div className="mt-4 p-4 bg-blue-500/20 border border-blue-500/30 rounded-xl">
-          <p className="text-blue-200 text-sm">
+        <div 
+          className="mt-4 p-4 rounded-xl"
+          style={{ 
+            backgroundColor: 'var(--primary-lightest)',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: 'var(--primary-lighter)'
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--primary-active)' }}>
             💡 <strong>Note:</strong> All fields are optional. The AI will only use the information you provide and won't include placeholder text for empty fields.
           </p>
         </div>
       </div>
 
       {/* Field Mapping */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <Settings className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <Settings className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Map CSV Fields (Recipient Info)
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.keys(fieldMapping).map((field) => (
             <div key={field}>
-              <label className="block text-purple-100 text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
                 {field.replace('_', ' ').toUpperCase()}
-                {field === 'email' && <span className="text-red-300"> *</span>}
+                {field === 'email' && <span style={{ color: 'var(--error)' }}> *</span>}
               </label>
               <select
                 value={fieldMapping[field]}
                 onChange={(e) => setFieldMapping(prev => ({ ...prev, [field]: e.target.value }))}
-                className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+                style={{ 
+                  backgroundColor: 'var(--background)',
+                  borderColor: 'var(--border-medium)',
+                  color: 'var(--foreground)',
+                  '--tw-ring-color': 'var(--primary-color)'
+                }}
               >
-                <option value="" className="bg-purple-800">Select column</option>
+                <option value="">Select column</option>
                 {csvHeaders.map(header => (
-                  <option key={header} value={header} className="bg-purple-800">
+                  <option key={header} value={header}>
                     {header}
                   </option>
                 ))}
@@ -816,15 +880,15 @@ Generate both subject line and email body. Make sure both are complete and profe
       </div>
 
       {/* SMTP Configuration */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <Mail className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <Mail className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Email Configuration
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               SMTP Host
             </label>
             <input
@@ -832,12 +896,18 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={smtpConfig.host}
               onChange={(e) => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
               placeholder="smtp.gmail.com"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
           
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Port
             </label>
             <input
@@ -845,13 +915,19 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={smtpConfig.port}
               onChange={(e) => setSmtpConfig(prev => ({ ...prev, port: parseInt(e.target.value) }))}
               placeholder="587"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
           
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
-              Email Address <span className="text-red-300">*</span>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              Email Address <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="email"
@@ -861,13 +937,19 @@ Generate both subject line and email body. Make sure both are complete and profe
                 auth: { ...prev.auth, user: e.target.value }
               }))}
               placeholder="your-email@gmail.com"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
           
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-2">
-              App Password <span className="text-red-300">*</span>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              App Password <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="password"
@@ -877,12 +959,18 @@ Generate both subject line and email body. Make sure both are complete and profe
                 auth: { ...prev.auth, pass: e.target.value }
               }))}
               placeholder="App-specific password"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-purple-100 text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               From Name
             </label>
             <input
@@ -890,13 +978,27 @@ Generate both subject line and email body. Make sure both are complete and profe
               value={smtpConfig.fromName}
               onChange={(e) => setSmtpConfig(prev => ({ ...prev, fromName: e.target.value }))}
               placeholder="Your Company Name"
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
         </div>
 
-        <div className="mt-4 p-4 bg-blue-500/20 border border-blue-500/30 rounded-xl">
-          <p className="text-blue-200 text-sm">
+        <div 
+          className="mt-4 p-4 rounded-xl"
+          style={{ 
+            backgroundColor: 'var(--primary-lightest)',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: 'var(--primary-lighter)'
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--primary-active)' }}>
             💡 <strong>For Gmail:</strong> Use your Gmail address and an App Password (not your regular password). 
             <br />Generate an App Password at: Google Account → Security → 2-Step Verification → App passwords
           </p>
@@ -904,78 +1006,103 @@ Generate both subject line and email body. Make sure both are complete and profe
       </div>
 
       {/* Agent Configuration */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <Bot className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <Bot className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Configure AI Agent
         </h2>
         
         <div className="space-y-6">
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-3">
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
               Agent Name
             </label>
             <input
               type="text"
               value={agentConfig.name}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-3">
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
               Email Purpose
             </label>
             <input
               type="text"
               value={agentConfig.emailPurpose}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, emailPurpose: e.target.value }))}
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-3">
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
               Call-to-Action
             </label>
             <textarea
               value={agentConfig.callToAction}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, callToAction: e.target.value }))}
               rows={2}
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-purple-100 text-sm font-medium mb-3">
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
               System Prompt (Advanced)
             </label>
             <textarea
               value={agentConfig.systemPrompt}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, systemPrompt: e.target.value }))}
               rows={6}
-              className="w-full bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl px-4 py-3 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
             />
           </div>
         </div>
 
         <div className="flex gap-4 mt-8">
-          <button
+          <Button
             onClick={() => setCurrentStep(1)}
-            className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all duration-300 flex items-center gap-2"
+            variant="ghost"
+            icon={<ArrowLeft className="h-5 w-5" />}
           >
-            <ArrowLeft className="h-5 w-5" />
             Back
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setCurrentStep(3)}
             disabled={!fieldMapping.email || !smtpConfig.auth.user || !smtpConfig.auth.pass}
-            className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            variant="primary"
+            className="flex-1"
+            iconRight={<ArrowRight className="h-5 w-5" />}
           >
             Preview & Generate
-            <ArrowRight className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -984,57 +1111,57 @@ Generate both subject line and email body. Make sure both are complete and profe
   const renderPreviewStep = () => (
     <div className="space-y-6">
       {/* Campaign Overview */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <Users className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <Users className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Campaign Preview
         </h2>
         
         {/* Sender & Recipient Info Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/10 rounded-xl p-4">
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
               <UserCircle className="h-5 w-5" />
               Sender Information
             </h3>
             <div className="space-y-2 text-sm">
               {senderInfo.name && (
-                <div className="text-purple-200">
-                  <span className="font-medium">Name:</span> <span className="text-white">{senderInfo.name}</span>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  <span className="font-medium">Name:</span> <span style={{ color: 'var(--foreground)' }}>{senderInfo.name}</span>
                 </div>
               )}
               {senderInfo.title && (
-                <div className="text-purple-200">
-                  <span className="font-medium">Title:</span> <span className="text-white">{senderInfo.title}</span>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  <span className="font-medium">Title:</span> <span style={{ color: 'var(--foreground)' }}>{senderInfo.title}</span>
                 </div>
               )}
               {senderInfo.company && (
-                <div className="text-purple-200">
-                  <span className="font-medium">Company:</span> <span className="text-white">{senderInfo.company}</span>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  <span className="font-medium">Company:</span> <span style={{ color: 'var(--foreground)' }}>{senderInfo.company}</span>
                 </div>
               )}
               {senderInfo.industry && (
-                <div className="text-purple-200">
-                  <span className="font-medium">Industry:</span> <span className="text-white">{senderInfo.industry}</span>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  <span className="font-medium">Industry:</span> <span style={{ color: 'var(--foreground)' }}>{senderInfo.industry}</span>
                 </div>
               )}
               {!senderInfo.name && !senderInfo.title && !senderInfo.company && (
-                <div className="text-purple-300 italic">No sender information provided</div>
+                <div className="italic" style={{ color: 'var(--text-tertiary)' }}>No sender information provided</div>
               )}
             </div>
           </div>
 
-          <div className="bg-white/10 rounded-xl p-4">
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
               <Users className="h-5 w-5" />
               Recipient Data Fields
             </h3>
             <div className="space-y-2 text-sm">
               {Object.entries(fieldMapping).map(([field, csvField]) => (
                 csvField && (
-                  <div key={field} className="text-purple-200">
+                  <div key={field} style={{ color: 'var(--text-secondary)' }}>
                     <span className="font-medium">{field.replace('_', ' ').toUpperCase()}:</span> 
-                    <span className="text-white ml-2">{csvField}</span>
+                    <span style={{ color: 'var(--foreground)' }} className="ml-2">{csvField}</span>
                   </div>
                 )
               ))}
@@ -1043,31 +1170,34 @@ Generate both subject line and email body. Make sure both are complete and profe
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/10 rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-white mb-2">{csvData.length}</div>
-            <div className="text-purple-200 text-sm">Total Recipients</div>
+          <div className="rounded-xl p-4 text-center shadow-sm" style={{ backgroundColor: 'var(--primary-lightest)' }}>
+            <div className="text-3xl font-bold mb-2" style={{ color: 'var(--primary-color)' }}>{csvData.length}</div>
+            <div className="text-sm" style={{ color: 'var(--primary-active)' }}>Total Recipients</div>
           </div>
-          <div className="bg-white/10 rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-green-400 mb-2">{campaignState.successful}</div>
-            <div className="text-purple-200 text-sm">Generated</div>
+          <div className="rounded-xl p-4 text-center shadow-sm" style={{ backgroundColor: 'var(--success-light)' }}>
+            <div className="text-3xl font-bold mb-2" style={{ color: 'var(--success)' }}>{campaignState.successful}</div>
+            <div className="text-sm" style={{ color: 'var(--success)' }}>Generated</div>
           </div>
-          <div className="bg-white/10 rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-red-400 mb-2">{campaignState.failed}</div>
-            <div className="text-purple-200 text-sm">Failed</div>
+          <div className="rounded-xl p-4 text-center shadow-sm" style={{ backgroundColor: 'var(--error-light)' }}>
+            <div className="text-3xl font-bold mb-2" style={{ color: 'var(--error)' }}>{campaignState.failed}</div>
+            <div className="text-sm" style={{ color: 'var(--error)' }}>Failed</div>
           </div>
         </div>
 
         {/* Progress Bar */}
         {campaignState.status === 'processing' && (
           <div className="mb-6">
-            <div className="flex justify-between text-sm text-purple-200 mb-2">
+            <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
               <span>Generating emails...</span>
               <span>{campaignState.processed} / {campaignState.total}</span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-2">
+            <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--gray-200)' }}>
               <div 
-                className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(campaignState.processed / campaignState.total) * 100}%` }}
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${(campaignState.processed / campaignState.total) * 100}%`,
+                  backgroundColor: 'var(--primary-color)'
+                }}
               ></div>
             </div>
           </div>
@@ -1076,49 +1206,49 @@ Generate both subject line and email body. Make sure both are complete and profe
         {/* Generated Emails Preview */}
         {generatedEmails.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
               <Eye className="h-5 w-5" />
               Generated Emails Preview
             </h3>
-            <div className="bg-white/10 rounded-xl p-4 max-h-300 overflow-y-auto">
+            <div className="rounded-xl p-4 max-h-96 overflow-y-auto" style={{ backgroundColor: 'var(--background-secondary)' }}>
               <div className="space-y-4">
                 {generatedEmails.map((emailItem, index) => (
-                  <div key={index} className="border border-white/20 rounded-lg p-4 bg-white/5">
+                  <div key={index} className="border rounded-lg p-4" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--background)' }}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-purple-200 text-sm">
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                           To: {emailItem.person[fieldMapping.email]}
                         </span>
                         {emailItem.person[fieldMapping.name] && (
-                          <span className="text-white font-medium">
+                          <span className="font-medium" style={{ color: 'var(--foreground)' }}>
                             ({emailItem.person[fieldMapping.name]})
                           </span>
                         )}
                       </div>
                       {emailItem.status === 'generated' ? (
-                        <Check className="h-5 w-5 text-green-400" />
+                        <Check className="h-5 w-5" style={{ color: 'var(--success)' }} />
                       ) : (
-                        <X className="h-5 w-5 text-red-400" />
+                        <X className="h-5 w-5" style={{ color: 'var(--error)' }} />
                       )}
                     </div>
                     
                     {emailItem.status === 'generated' ? (
                       <div className="space-y-3">
                         <div>
-                          <span className="text-purple-200 text-sm font-medium">Subject: </span>
-                          <span className="text-white text-sm">{emailItem.subject}</span>
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Subject: </span>
+                          <span className="text-sm" style={{ color: 'var(--foreground)' }}>{emailItem.subject}</span>
                         </div>
                         <div>
-                          <span className="text-purple-200 text-sm font-medium">Email Body:</span>
-                          <div className="bg-white/10 rounded-lg p-3 mt-2 max-h-48 overflow-y-auto">
-                            <p className="text-white text-sm whitespace-pre-wrap">
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Email Body:</span>
+                          <div className="rounded-lg p-3 mt-2 max-h-48 overflow-y-auto" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                            <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>
                               {emailItem.email}
                             </p>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-red-300 text-sm">
+                      <div className="text-sm" style={{ color: 'var(--error)' }}>
                         Failed to generate: {emailItem.error}
                       </div>
                     )}
@@ -1130,49 +1260,59 @@ Generate both subject line and email body. Make sure both are complete and profe
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-2 ">
-          <button
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button
             onClick={() => setCurrentStep(2)}
-            className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all duration-300 flex items-center gap-2"
+            variant="ghost"
+            icon={<ArrowLeft className="h-5 w-5" />}
           >
-            <ArrowLeft className="h-5 w-5" />
             Back to Configure
-          </button>
+          </Button>
           
           {campaignState.status === 'idle' && (
-            <button
+            <Button
               onClick={() => startBulkGeneration(false)}
               disabled={!user}
-              className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="primary"
+              className="flex-1"
+              icon={<Play className="h-5 w-5" />}
             >
-              <Play className="h-5 w-5" />
               Start Generating Emails
-            </button>
+            </Button>
           )}
 
           {campaignState.status === 'completed' && generatedEmails.length > 0 && (
             <div className="flex gap-4 flex-1">
-              <button
+              <Button
                 onClick={() => startBulkGeneration(true)}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center gap-2"
+                variant="outline"
+                icon={<RefreshCw className="h-5 w-5" />}
               >
-                <RefreshCw className="h-5 w-5" />
                 Regenerate All
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setCurrentStep(4)}
-                className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                variant="primary"
+                className="flex-1"
+                icon={<Send className="h-5 w-5" />}
               >
-                <Send className="h-5 w-5" />
                 Review & Send
-              </button>
+              </Button>
             </div>
           )}
         </div>
 
         {!user && (
-          <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
-            <p className="text-red-200 text-center">
+          <div 
+            className="mt-4 p-4 rounded-xl text-center"
+            style={{ 
+              backgroundColor: 'var(--error-light)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'var(--error)'
+            }}
+          >
+            <p style={{ color: 'var(--error)' }}>
               ⚠️ Please sign in to generate and send bulk emails
             </p>
           </div>
@@ -1184,58 +1324,58 @@ Generate both subject line and email body. Make sure both are complete and profe
   const renderSendStep = () => (
     <div className="space-y-6">
       {/* Results Overview */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <Send className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <Send className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Ready to Send
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-blue-500/20 rounded-xl p-4 text-center border border-blue-500/30">
-            <div className="text-2xl font-bold text-blue-300 mb-1">{generatedEmails.length}</div>
-            <div className="text-purple-200 text-sm">Total Processed</div>
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--primary-lightest)', borderColor: 'var(--primary-lighter)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--primary-color)' }}>{generatedEmails.length}</div>
+            <div className="text-sm" style={{ color: 'var(--primary-active)' }}>Total Processed</div>
           </div>
-          <div className="bg-green-500/20 rounded-xl p-4 text-center border border-green-500/30">
-            <div className="text-2xl font-bold text-green-300 mb-1">
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--success-light)', borderColor: 'var(--success)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--success)' }}>
               {generatedEmails.filter(e => e.status === 'generated').length}
             </div>
-            <div className="text-purple-200 text-sm">Ready to Send</div>
+            <div className="text-sm" style={{ color: 'var(--success)' }}>Ready to Send</div>
           </div>
-          <div className="bg-red-500/20 rounded-xl p-4 text-center border border-red-500/30">
-            <div className="text-2xl font-bold text-red-300 mb-1">
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--error-light)', borderColor: 'var(--error)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--error)' }}>
               {generatedEmails.filter(e => e.status === 'failed').length}
             </div>
-            <div className="text-purple-200 text-sm">Failed Generation</div>
+            <div className="text-sm" style={{ color: 'var(--error)' }}>Failed Generation</div>
           </div>
-          <div className="bg-purple-500/20 rounded-xl p-4 text-center border border-purple-500/30">
-            <div className="text-2xl font-bold text-purple-300 mb-1">
+          <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#f3e8ff' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: '#9333ea' }}>
               {Math.round((generatedEmails.filter(e => e.status === 'generated').length / generatedEmails.length) * 100)}%
             </div>
-            <div className="text-purple-200 text-sm">Success Rate</div>
+            <div className="text-sm" style={{ color: '#9333ea' }}>Success Rate</div>
           </div>
         </div>
 
         {/* Email List Preview */}
-        <div className="bg-white/10 rounded-xl p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Emails to be Sent</h3>
+        <div className="rounded-xl p-6 mb-6" style={{ backgroundColor: 'var(--background-secondary)' }}>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Emails to be Sent</h3>
           <div className="max-h-60 overflow-y-auto">
             <div className="space-y-2">
               {generatedEmails.filter(e => e.status === 'generated').map((emailItem, index) => (
-                <div key={index} className="flex items-center justify-between bg-white/10 rounded-lg p-3">
+                <div key={index} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: 'var(--background)' }}>
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <CheckCircle className="h-4 w-4" style={{ color: 'var(--success)' }} />
                     <div>
-                      <span className="text-white font-medium">
+                      <span className="font-medium" style={{ color: 'var(--foreground)' }}>
                         {emailItem.person[fieldMapping.email]}
                       </span>
                       {emailItem.person[fieldMapping.name] && (
-                        <span className="text-purple-200 text-sm ml-2">
+                        <span className="text-sm ml-2" style={{ color: 'var(--text-secondary)' }}>
                           ({emailItem.person[fieldMapping.name]})
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-purple-200 text-xs">
+                  <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                     {emailItem.subject?.substring(0, 50)}...
                   </div>
                 </div>
@@ -1245,38 +1385,39 @@ Generate both subject line and email body. Make sure both are complete and profe
         </div>
 
         {/* SMTP Configuration Summary */}
-        <div className="bg-white/10 rounded-xl p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-3">Email Configuration</h3>
+        <div className="rounded-xl p-6 mb-6" style={{ backgroundColor: 'var(--background-secondary)' }}>
+          <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>Email Configuration</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-purple-200">From: </span>
-              <span className="text-white">{smtpConfig.fromName || smtpConfig.auth.user}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>From: </span>
+              <span style={{ color: 'var(--foreground)' }}>{smtpConfig.fromName || smtpConfig.auth.user}</span>
             </div>
             <div>
-              <span className="text-purple-200">SMTP: </span>
-              <span className="text-white">{smtpConfig.host}:{smtpConfig.port}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>SMTP: </span>
+              <span style={{ color: 'var(--foreground)' }}>{smtpConfig.host}:{smtpConfig.port}</span>
             </div>
           </div>
         </div>
 
         {/* Send Actions */}
         <div className="flex gap-4">
-          <button
+          <Button
             onClick={() => setCurrentStep(3)}
-            className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all duration-300 flex items-center gap-2"
+            variant="ghost"
+            icon={<ArrowLeft className="h-5 w-5" />}
           >
-            <ArrowLeft className="h-5 w-5" />
             Back to Preview
-          </button>
+          </Button>
           
-          <button
+          <Button
             onClick={sendBulkEmails}
             disabled={generatedEmails.filter(e => e.status === 'generated').length === 0}
-            className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            className="flex-1"
+            icon={<Send className="h-5 w-5" />}
           >
-            <Send className="h-5 w-5" />
             Send {generatedEmails.filter(e => e.status === 'generated').length} Emails
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1285,44 +1426,47 @@ Generate both subject line and email body. Make sure both are complete and profe
   const renderResultsStep = () => (
     <div className="space-y-6">
       {/* Sending Progress */}
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <BarChart3 className="h-6 w-6" />
+      <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
+          <BarChart3 className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           {campaignState.status === 'sending' ? 'Sending Emails...' : 'Campaign Results'}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-blue-500/20 rounded-xl p-4 text-center border border-blue-500/30">
-            <div className="text-2xl font-bold text-blue-300 mb-1">{campaignState.processed}</div>
-            <div className="text-purple-200 text-sm">Processed</div>
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--primary-lightest)', borderColor: 'var(--primary-lighter)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--primary-color)' }}>{campaignState.processed}</div>
+            <div className="text-sm" style={{ color: 'var(--primary-active)' }}>Processed</div>
           </div>
-          <div className="bg-green-500/20 rounded-xl p-4 text-center border border-green-500/30">
-            <div className="text-2xl font-bold text-green-300 mb-1">{campaignState.successful}</div>
-            <div className="text-purple-200 text-sm">Sent Successfully</div>
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--success-light)', borderColor: 'var(--success)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--success)' }}>{campaignState.successful}</div>
+            <div className="text-sm" style={{ color: 'var(--success)' }}>Sent Successfully</div>
           </div>
-          <div className="bg-red-500/20 rounded-xl p-4 text-center border border-red-500/30">
-            <div className="text-2xl font-bold text-red-300 mb-1">{campaignState.failed}</div>
-            <div className="text-purple-200 text-sm">Failed</div>
+          <div className="rounded-xl p-4 text-center border" style={{ backgroundColor: 'var(--error-light)', borderColor: 'var(--error)' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: 'var(--error)' }}>{campaignState.failed}</div>
+            <div className="text-sm" style={{ color: 'var(--error)' }}>Failed</div>
           </div>
-          <div className="bg-purple-500/20 rounded-xl p-4 text-center border border-purple-500/30">
-            <div className="text-2xl font-bold text-purple-300 mb-1">
+          <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#f3e8ff' }}>
+            <div className="text-2xl font-bold mb-1" style={{ color: '#9333ea' }}>
               {campaignState.processed > 0 ? Math.round((campaignState.successful / campaignState.processed) * 100) : 0}%
             </div>
-            <div className="text-purple-200 text-sm">Success Rate</div>
+            <div className="text-sm" style={{ color: '#9333ea' }}>Success Rate</div>
           </div>
         </div>
 
         {/* Progress Bar for Sending */}
         {campaignState.status === 'sending' && (
           <div className="mb-6">
-            <div className="flex justify-between text-sm text-purple-200 mb-2">
+            <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
               <span>Sending emails...</span>
               <span>{campaignState.processed} / {generatedEmails.filter(e => e.status === 'generated').length}</span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-3">
+            <div className="w-full rounded-full h-3" style={{ backgroundColor: 'var(--gray-200)' }}>
               <div 
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${(campaignState.processed / generatedEmails.filter(e => e.status === 'generated').length) * 100}%` }}
+                className="h-3 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${(campaignState.processed / generatedEmails.filter(e => e.status === 'generated').length) * 100}%`,
+                  backgroundColor: 'var(--success)'
+                }}
               ></div>
             </div>
           </div>
@@ -1330,33 +1474,38 @@ Generate both subject line and email body. Make sure both are complete and profe
 
         {/* Detailed Results */}
         {campaignState.sendResults.length > 0 && (
-          <div className="bg-white/10 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Detailed Results</h3>
+          <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Detailed Results</h3>
             <div className="max-h-96 overflow-y-auto">
               <div className="space-y-2">
                 {campaignState.sendResults.map((result, index) => (
-                  <div key={index} className={`flex items-center justify-between rounded-lg p-3 ${
-                    result.success ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'
-                  }`}>
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between rounded-lg p-3 border"
+                    style={{ 
+                      backgroundColor: result.success ? 'var(--success-light)' : 'var(--error-light)',
+                      borderColor: result.success ? 'var(--success)' : 'var(--error)'
+                    }}
+                  >
                     <div className="flex items-center gap-3">
                       {result.success ? (
-                        <CheckCircle className="h-5 w-5 text-green-400" />
+                        <CheckCircle className="h-5 w-5" style={{ color: 'var(--success)' }} />
                       ) : (
-                        <AlertCircle className="h-5 w-5 text-red-400" />
+                        <AlertCircle className="h-5 w-5" style={{ color: 'var(--error)' }} />
                       )}
                       <div>
-                        <span className="text-white font-medium">{result.name}</span>
-                        <span className="text-purple-200 text-sm ml-2">({result.email})</span>
+                        <span className="font-medium" style={{ color: 'var(--foreground)' }}>{result.name}</span>
+                        <span className="text-sm ml-2" style={{ color: 'var(--text-secondary)' }}>({result.email})</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-medium ${result.success ? 'text-green-300' : 'text-red-300'}`}>
+                      <div className="text-sm font-medium" style={{ color: result.success ? 'var(--success)' : 'var(--error)' }}>
                         {result.success ? 'Sent' : 'Failed'}
                       </div>
                       {result.error && (
-                        <div className="text-xs text-red-200">{result.error}</div>
+                        <div className="text-xs" style={{ color: 'var(--error)' }}>{result.error}</div>
                       )}
-                      <div className="text-xs text-purple-200">
+                      <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                         {new Date(result.timestamp).toLocaleTimeString()}
                       </div>
                     </div>
@@ -1370,7 +1519,7 @@ Generate both subject line and email body. Make sure both are complete and profe
         {/* Action Buttons */}
         {campaignState.status === 'sent' && (
           <div className="flex gap-4 mt-6">
-            <button
+            <Button
               onClick={() => {
                 // Reset to start a new campaign
                 setCurrentStep(1);
@@ -1385,19 +1534,20 @@ Generate both subject line and email body. Make sure both are complete and profe
                   sendResults: []
                 });
               }}
-              className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+              variant="primary"
+              className="flex-1"
+              icon={<Upload className="h-5 w-5" />}
             >
-              <Upload className="h-5 w-5" />
               Start New Campaign
-            </button>
+            </Button>
             
-            <button
+            <Button
               onClick={() => router.push('/dashboard')}
-              className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all duration-300 flex items-center gap-2"
+              variant="ghost"
+              icon={<Building className="h-5 w-5" />}
             >
-              <Building className="h-5 w-5" />
               Back to Dashboard
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -1413,36 +1563,37 @@ Generate both subject line and email body. Make sure both are complete and profe
   // Auth check
   if (!user && !isLoadingUser) {
     return (
-      <div className="min-h-screen  flex items-center justify-center">
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-8 shadow-2xl text-center max-w-md">
-          <Bot className="h-16 w-16 text-white/50 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-4">Bulk Email Agent</h1>
-          <p className="text-purple-200 mb-6">Please sign in to access the bulk email generation system.</p>
-          <button
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
+        <div className="bg-white rounded-2xl border shadow-xl p-8 text-center max-w-md" style={{ borderColor: 'var(--border-light)' }}>
+          <Bot className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
+          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Bulk Email Agent</h1>
+          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Please sign in to access the bulk email generation system.</p>
+          <Button
             onClick={() => router.push('/login')}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
+            variant="primary"
+            className="w-full"
           >
             Sign In
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3c78fa] to-indigo-800">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background-secondary)' }}>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 backdrop-blur-lg rounded-full p-3 border border-white/30">
+            <div className="rounded-full p-3 shadow-md" style={{ backgroundColor: 'var(--primary-color)' }}>
               <Bot className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
                 Bulk Email Agent
               </h1>
-              <p className="text-purple-200">
+              <p style={{ color: 'var(--text-secondary)' }}>
                 AI-powered personalized email campaigns
               </p>
             </div>
@@ -1453,7 +1604,7 @@ Generate both subject line and email body. Make sure both are complete and profe
         </div>
 
         {/* Step Navigation */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-4 mb-8">
+        <div className="bg-white rounded-2xl border p-4 mb-8 shadow-sm" style={{ borderColor: 'var(--border-light)' }}>
           <div className="flex items-center justify-between">
             {[
               { step: 1, label: 'Upload CSV', icon: Upload },
@@ -1463,15 +1614,19 @@ Generate both subject line and email body. Make sure both are complete and profe
               { step: 5, label: 'Results', icon: BarChart3 }
             ].map(({ step, label, icon: Icon }) => (
               <div key={step} className="flex items-center">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 ${
-                  currentStep >= step 
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' 
-                    : 'text-purple-200'
-                }`}>
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 ${
+                    currentStep >= step ? '' : ''
+                  }`}
+                  style={{
+                    backgroundColor: currentStep >= step ? 'var(--primary-color)' : 'transparent',
+                    color: currentStep >= step ? 'white' : 'var(--text-tertiary)'
+                  }}
+                >
                   <Icon className="h-4 w-4" />
                   <span className="hidden sm:inline text-sm font-medium">{label}</span>
                 </div>
-                {step < 5 && <div className="w-6 h-px bg-white/20 mx-1 hidden sm:block" />}
+                {step < 5 && <div className="w-6 h-px mx-1 hidden sm:block" style={{ backgroundColor: 'var(--border-light)' }} />}
               </div>
             ))}
           </div>

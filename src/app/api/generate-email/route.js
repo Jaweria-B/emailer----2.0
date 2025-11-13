@@ -64,8 +64,9 @@ export async function POST(request) {
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
+      console.error('GEMINI_API_KEY not found in environment variables');
       return NextResponse.json(
-        { error: 'GEMINI API key not configured on server' },
+        { error: 'Email generation service is not configured. Please contact support.' },
         { status: 500 }
       );
     }
@@ -76,7 +77,7 @@ export async function POST(request) {
     // Validate required fields
     if (!prompt) {
       return NextResponse.json(
-        { error: 'Prompt is required' },
+        { error: 'Email content is required. Please describe what you want to say.' },
         { status: 400 }
       );
     }
@@ -84,40 +85,123 @@ export async function POST(request) {
     // Create the email generation service
     const emailService = new EmailGenerationService(AI_PROVIDERS.GEMINI, apiKey);
 
-    // Generate the email
-    const result = await emailService.generateEmail(prompt);
+    // Generate the email with retry logic built-in
+    let result;
+    try {
+      result = await emailService.generateEmail(prompt);
+    } catch (generationError) {
+      console.error('Email generation failed:', generationError);
+      
+      // Handle specific error types with user-friendly messages
+      if (generationError.message.includes('503') || generationError.message.includes('overloaded')) {
+        return NextResponse.json(
+          { 
+            error: 'Our AI service is experiencing high demand right now. Please try again in a few moments.',
+            retry_suggested: true,
+            error_type: 'service_overload'
+          },
+          { status: 503 }
+        );
+      }
+      
+      if (generationError.message.includes('429') || generationError.message.includes('rate limit')) {
+        return NextResponse.json(
+          { 
+            error: 'We\'ve reached our temporary rate limit. Please wait 30 seconds and try again.',
+            retry_suggested: true,
+            error_type: 'rate_limit'
+          },
+          { status: 429 }
+        );
+      }
+      
+      if (generationError.message.includes('timeout')) {
+        return NextResponse.json(
+          { 
+            error: 'The request took too long to process. Please try generating your email again.',
+            retry_suggested: true,
+            error_type: 'timeout'
+          },
+          { status: 504 }
+        );
+      }
+      
+      if (generationError.message.includes('Authentication failed') || generationError.message.includes('401')) {
+        console.error('API authentication failed - check GEMINI_API_KEY');
+        return NextResponse.json(
+          { 
+            error: 'There\'s a configuration issue with our email service. Please contact support.',
+            error_type: 'auth_error'
+          },
+          { status: 500 }
+        );
+      }
 
-    // Validate the result
-    if (!result || !result.subject || !result.body) {
+      if (generationError.message.includes('Invalid request') || generationError.message.includes('400')) {
+        return NextResponse.json(
+          { 
+            error: 'Your request couldn\'t be processed. Please check your input and try again.',
+            error_type: 'invalid_request'
+          },
+          { status: 400 }
+        );
+      }
+
+      // Generic generation error
       return NextResponse.json(
-        { error: 'Invalid response from AI provider' },
+        { 
+          error: 'We\'re having trouble generating your email right now. Please try again in a few moments.',
+          retry_suggested: true,
+          error_type: 'generation_failed'
+        },
         { status: 500 }
       );
     }
 
-    // 🆕 ADD BRANDING IF REQUIRED (Free plan)
+    // Validate the result
+    if (!result || !result.subject || !result.body) {
+      console.error('Invalid result from AI service:', result);
+      return NextResponse.json(
+        { 
+          error: 'The AI generated an incomplete email. Please try again.',
+          retry_suggested: true,
+          error_type: 'invalid_response'
+        },
+        { status: 500 }
+      );
+    }
+
+    // ADD BRANDING IF REQUIRED (Free plan)
     if (hasBranding) {
       result.body = result.body + '\n\n---\nPowered by OpenPromote ⚡';
     }
 
-    // Track usage
+    // Track usage for authenticated users
     if (user) {
-      // Increment usage for authenticated users
       try {
         await emailUsageDb.incrementSimple(user.id);
-      } catch (error) {
-        console.error('Failed to track usage:', error);
+        console.log(`✅ Usage tracked for user ${user.id}`);
+      } catch (usageError) {
+        console.error('Failed to track usage:', usageError);
         // Don't fail the request if usage tracking fails
       }
     } else {
       // Save device ID for anonymous users
-      await anonymousDevicesDb.create(deviceId);
+      try {
+        await anonymousDevicesDb.create(deviceId);
+        console.log(`✅ Anonymous device tracked: ${deviceId}`);
+      } catch (deviceError) {
+        console.error('Failed to track anonymous device:', deviceError);
+        // Don't fail the request if device tracking fails
+      }
     }
 
     // Create the response
     const response = NextResponse.json({
-      ...result,
-      has_branding: hasBranding
+      subject: result.subject,
+      body: result.body,
+      has_branding: hasBranding,
+      success: true
     });
 
     // Set device cookie for new anonymous users
@@ -127,25 +211,45 @@ export async function POST(request) {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 60 * 60 * 24 * 365 * 10, // 10 years
         sameSite: 'lax',
+        path: '/'
       });
     }
 
+    console.log(`✅ Email generated successfully ${user ? `for user ${user.id}` : 'for anonymous user'}`);
     return response;
 
   } catch (error) {
-    console.error('Email generation error:', error);
+    console.error('❌ Unexpected error in email generation route:', error);
     
-    // if (error.message.includes('API error')) {
-    //   return NextResponse.json(
-    //     { error: `AI Provider Error: ${error.message}` },
-    //     { status: 502 }
-    //   );
-    // }
+    // Handle JSON parsing errors
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid request format. Please try again.',
+          error_type: 'parse_error'
+        },
+        { status: 400 }
+      );
+    }
 
+    // Handle database errors
+    if (error.message && error.message.includes('database')) {
+      return NextResponse.json(
+        { 
+          error: 'We\'re experiencing a temporary database issue. Please try again shortly.',
+          retry_suggested: true,
+          error_type: 'database_error'
+        },
+        { status: 503 }
+      );
+    }
+
+    // Generic catch-all error
     return NextResponse.json(
       { 
-        error: 'We\'re having trouble generating your email right now. Please try again in a few moments.',
-        user_friendly: true
+        error: 'An unexpected error occurred. Please try again or contact support if the problem persists.',
+        retry_suggested: true,
+        error_type: 'unknown_error'
       },
       { status: 500 }
     );
@@ -154,7 +258,10 @@ export async function POST(request) {
 
 export async function GET() {
   return NextResponse.json(
-    { error: 'Method not allowed. Use POST.' },
+    { 
+      error: 'Method not allowed. This endpoint only accepts POST requests.',
+      allowed_methods: ['POST']
+    },
     { status: 405 }
   );
 }

@@ -312,6 +312,7 @@ WRITING INSTRUCTIONS:
    - IT IS VERY VERY IMPORTANT: Write naturally - NO placeholders, NO brackets, NO template markers like [Name] or [Date] or any other kind of placeholders
    - If information is missing, write around it gracefully - use context clues or general phrasing
    - Make the email feel complete and ready to send as-is
+   - IMPORTANT: DO NOT include bold words as they turn out with double stars in the end (**). So please donot include bold words in the email.
 
 8. SIGNATURE: ${formData.senderName ? `End with an appropriate closing phrase and sign with the name "${formData.senderName}"` : 'End with an appropriate closing phrase like "Best regards," or "Thank you," but do NOT include a signature name since none was provided'}
 

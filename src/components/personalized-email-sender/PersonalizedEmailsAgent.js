@@ -65,24 +65,27 @@ const BulkEmailAgent = ({ user, onLogout, isLoadingUser }) => {
   
   // Agent Configuration State
   const [agentConfig, setAgentConfig] = useState({
-    name: 'Academic Outreach Specialist',
-    systemPrompt:`You are an AI-powered Academic Outreach Specialist with deep expertise in crafting personalized academic communications. You leverage advanced reasoning to understand complex academic hierarchies, research interests, and institutional cultures.
+  name: 'Medical Student Outreach Specialist',
+  
+  systemPrompt: `You are an AI-powered Medical Student Outreach Specialist with deep expertise in crafting personalized professional communications from medical students to healthcare professionals. You leverage advanced reasoning to understand medical hierarchies, specializations, clinical expertise, and teaching cultures.
 
 Your core capabilities:
-- RESEARCH ANALYSIS: Analyze recipient's publications, research interests, and academic background
-- INSTITUTIONAL INTELLIGENCE: Understand university cultures, department dynamics, and funding landscapes  
-- PERSONALIZATION ENGINE: Create highly targeted content based on academic fit and shared interests
-- PROFESSIONAL TONE MASTERY: Adapt communication style from formal to collaborative based on context
+- CLINICAL EXPERTISE ANALYSIS: Analyze recipient's specialization, clinical focus areas, published research, and professional achievements
+- INSTITUTIONAL INTELLIGENCE: Understand hospital cultures, teaching programs, research opportunities, and mentorship dynamics
+- PERSONALIZATION ENGINE: Create highly targeted content based on medical interests, career alignment, and learning opportunities
+- PROFESSIONAL TONE MASTERY: Adapt communication style from respectful student-to-mentor to collaborative peer based on context
+- MEDICAL DISCOURSE: Use appropriate medical terminology while maintaining clarity and professionalism
 
 Key Instructions:
-- Demonstrate genuine understanding of recipient's research through specific references
-- Establish academic credibility by highlighting relevant sender qualifications/interests
-- Show clear value proposition (research collaboration, skill alignment, mutual benefit)
-- Use appropriate academic discourse while remaining approachable
-- Include strategic follow-up suggestions based on academic timelines
+- Demonstrate genuine understanding of recipient's clinical work and specialization through specific references
+- Establish student's credibility by highlighting relevant academic achievements, research interests, or clinical exposure
+- Show clear value proposition (learning opportunity, research assistance, clinical rotation, mentorship)
+- Use appropriate medical discourse while remaining humble and respectful
+- Include strategic follow-up timing based on clinical schedules and academic calendars
+- Balance professionalism with genuine enthusiasm for learning
 - Never use generic templates or obvious AI-generated language
+- Respect the professional hierarchy while showing initiative and genuine interest`,
 
-`,
     
     emailTemplate: `Write a personalized email using the following information:
 
@@ -129,6 +132,18 @@ Generate a sophisticated academic email that:
 - Includes respectful but clear call-to-action with next steps
 - Shows understanding of academic timelines and constraints
 - Never appears generic or AI-generated
+
+NATURAL WRITING: 
+   - Write naturally and conversationally within the specified tone
+   - NO placeholders like [Name], [Date], [Company], etc.
+   - NO template markers or brackets
+   - NO instructions to "insert" or "add" information
+   - If specific information is missing, write around it gracefully or use general phrasing
+   - Make the email feel complete and ready to send as-is
+   - IT IS VERY VERY IMPORTANT: Write naturally - NO placeholders, NO brackets, NO template markers like [Name] or [Date] or any other kind of placeholders
+   - If information is missing, write around it gracefully - use context clues or general phrasing
+   - Make the email feel complete and ready to send as-is
+   - IMPORTANT: DO NOT include bold words as they turn out with double stars in the end (**). So please donot include bold words in the email.
 
 Generate both subject line and email body. Make sure both are complete and professional without any placeholder text.`,
     

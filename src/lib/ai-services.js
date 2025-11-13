@@ -309,6 +309,9 @@ WRITING INSTRUCTIONS:
    - NO instructions to "insert" or "add" information
    - If specific information is missing, write around it gracefully or use general phrasing
    - Make the email feel complete and ready to send as-is
+   - IT IS VERY VERY IMPORTANT: Write naturally - NO placeholders, NO brackets, NO template markers like [Name] or [Date] or any other kind of placeholders
+   - If information is missing, write around it gracefully - use context clues or general phrasing
+   - Make the email feel complete and ready to send as-is
 
 8. SIGNATURE: ${formData.senderName ? `End with an appropriate closing phrase and sign with the name "${formData.senderName}"` : 'End with an appropriate closing phrase like "Best regards," or "Thank you," but do NOT include a signature name since none was provided'}
 

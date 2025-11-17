@@ -148,12 +148,58 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
         setSelectedProvider(provider);
     };
 
+    const validateInputs = () => {
+        const MAX_RAW_THOUGHTS = 5000;
+        const MAX_CONTEXT = 3000;
+        const MAX_REPLYING_TO = 10000;
+        const MAX_SUBJECT = 200;
+        const MAX_RECIPIENT = 100;
+        const MAX_SENDER = 100;
+    
+        if (formData.rawThoughts.length > MAX_RAW_THOUGHTS) {
+            alert(`Your thoughts are too long. Please keep it under ${MAX_RAW_THOUGHTS} characters. Current: ${formData.rawThoughts.length}`);
+            return false;
+        }
+    
+        if (formData.context.length > MAX_CONTEXT) {
+            alert(`Additional context is too long. Please keep it under ${MAX_CONTEXT} characters. Current: ${formData.context.length}`);
+            return false;
+        }
+    
+        if (formData.replyingTo.length > MAX_REPLYING_TO) {
+            alert(`The email you're replying to is too long. Please keep it under ${MAX_REPLYING_TO} characters. Current: ${formData.replyingTo.length}`);
+            return false;
+        }
+    
+        if (formData.subject.length > MAX_SUBJECT) {
+            alert(`Subject context is too long. Please keep it under ${MAX_SUBJECT} characters.`);
+            return false;
+        }
+    
+        if (formData.recipient.length > MAX_RECIPIENT) {
+            alert(`Recipient name is too long. Please keep it under ${MAX_RECIPIENT} characters.`);
+            return false;
+        }
+    
+        if (formData.senderName.length > MAX_SENDER) {
+            alert(`Your name is too long. Please keep it under ${MAX_SENDER} characters.`);
+            return false;
+        }
+    
+        return true;
+    };
+    
+    
     const generateEmail = async () => {
         if (!formData.rawThoughts.trim()) {
             alert('Please enter your thoughts about what you want to say');
             return;
         }
 
+        if (!validateInputs()) {
+            return;
+        }
+            
         setIsLoading(true);
         
         try {

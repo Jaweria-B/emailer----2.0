@@ -789,7 +789,7 @@ RAW THOUGHTS: ${formData.rawThoughts}
 ⚙️ EMAIL PARAMETERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${formData.recipient ? `📧 Recipient: ${formData.recipient}` : '📧 Recipient: Not specified - use modern email greeting like "Hi there," or "Hello," or more such greetings that would compensate for the recipients name and won't disturb the email performace or look.'}
+${formData.recipient ? `📧 Recipient: ${formData.recipient}` : '📧 Recipient: Not specified - use modern email greeting like "Hi there," or "Hello," or more such greetings that would compensate for the recipients name and would not disturb the email performace or look.'}
 ${formData.senderName ? `✍️ Sender Name: ${formData.senderName}` : '✍️ Sender Name: Not specified (use generic closing)'}
 ${formData.subject ? `📌 Subject Context: ${formData.subject}` : '📌 Subject: Create appropriate subject line'}
 ${formData.context ? `📋 Additional Context: ${formData.context}` : ''}

@@ -31,6 +31,7 @@ import UsageWidget from '@/components/UsageWidget';
 import UpgradeModal from '@/components/UpgradeModal';
 import Button from '@/components/button';
 import LinkButton from '@/components/linkButton';
+import { DEFAULT_AGENT_CONFIG } from '@/components/prompts/personalized-generation/prompt';
 
 const BulkEmailAgent = ({ user, onLogout, isLoadingUser }) => {
   const router = useRouter();
@@ -48,107 +49,21 @@ const BulkEmailAgent = ({ user, onLogout, isLoadingUser }) => {
     auth: {
       user: '',
       pass: ''
-    },
-    fromName: ''
+    }
   });
 
   // Sender Information State
   const [senderInfo, setSenderInfo] = useState({
     name: '',
-    title: '',
-    company: '',
-    industry: '',
-    bio: '',
-    expertise: '',
-    achievements: ''
+    bio: ''
   });
   
   // Agent Configuration State
   const [agentConfig, setAgentConfig] = useState({
-  name: 'Medical Student Outreach Specialist',
-  
-  systemPrompt: `You are an AI-powered Medical Student Outreach Specialist with deep expertise in crafting personalized professional communications from medical students to healthcare professionals. You leverage advanced reasoning to understand medical hierarchies, specializations, clinical expertise, and teaching cultures.
-
-Your core capabilities:
-- CLINICAL EXPERTISE ANALYSIS: Analyze recipient's specialization, clinical focus areas, published research, and professional achievements
-- INSTITUTIONAL INTELLIGENCE: Understand hospital cultures, teaching programs, research opportunities, and mentorship dynamics
-- PERSONALIZATION ENGINE: Create highly targeted content based on medical interests, career alignment, and learning opportunities
-- PROFESSIONAL TONE MASTERY: Adapt communication style from respectful student-to-mentor to collaborative peer based on context
-- MEDICAL DISCOURSE: Use appropriate medical terminology while maintaining clarity and professionalism
-
-Key Instructions:
-- Demonstrate genuine understanding of recipient's clinical work and specialization through specific references
-- Establish student's credibility by highlighting relevant academic achievements, research interests, or clinical exposure
-- Show clear value proposition (learning opportunity, research assistance, clinical rotation, mentorship)
-- Use appropriate medical discourse while remaining humble and respectful
-- Include strategic follow-up timing based on clinical schedules and academic calendars
-- Balance professionalism with genuine enthusiasm for learning
-- Never use generic templates or obvious AI-generated language
-- Respect the professional hierarchy while showing initiative and genuine interest`,
-
-    
-    emailTemplate: `Write a personalized email using the following information:
-
-RECIPIENT DETAILS:
-{recipient_info}
-
-SENDER DETAILS:
-{sender_info}
-
-Email Purpose: {email_purpose}
-Call-to-Action: {call_to_action}
-
-CRITICAL: If any information is not provided or empty, DO NOT use placeholder text like "[Your Name]", "[Company]", etc. Instead:
-- Write the email in a general manner without mentioning missing information
-- Focus on the information that IS available
-- Make the email flow naturally without obvious gaps
-- If sender name is missing, avoid using "I" statements that require a name
-- If company is missing, don't mention company-specific details
-- Adapt the tone and content based on available information only
-
-Create an email that:
-1. Addresses the recipient personally (if name is available)
-2. Shows you've researched their background (using available recipient info)
-3. Establishes sender credibility naturally (using available sender info)
-4. Provides clear value proposition
-5. Includes the specified call-to-action
-6. Maintains professional tone
-7. NEVER uses placeholder text or brackets for missing information
-8. Flows naturally regardless of what information is missing
-
-ADVANCED REASONING REQUIREMENTS:
-1. Analyze the academic fit between sender and recipient
-2. Identify specific research connections or collaboration opportunities
-3. Determine appropriate level of formality based on academic hierarchy
-4. Craft compelling narrative showing genuine research interest
-5. Include strategic timing considerations for academic cycles
-
-Generate a sophisticated academic email that:
-- Opens with specific reference to recipient's recent work or interests
-- Establishes sender's credibility and relevant background naturally
-- Demonstrates clear research into recipient's academic profile
-- Presents compelling value proposition for collaboration/connection
-- Uses appropriate academic tone and terminology
-- Includes respectful but clear call-to-action with next steps
-- Shows understanding of academic timelines and constraints
-- Never appears generic or AI-generated
-
-NATURAL WRITING: 
-   - Write naturally and conversationally within the specified tone
-   - NO placeholders like [Name], [Date], [Company], etc.
-   - NO template markers or brackets
-   - NO instructions to "insert" or "add" information
-   - If specific information is missing, write around it gracefully or use general phrasing
-   - Make the email feel complete and ready to send as-is
-   - IT IS VERY VERY IMPORTANT: Write naturally - NO placeholders, NO brackets, NO template markers like [Name] or [Date] or any other kind of placeholders
-   - If information is missing, write around it gracefully - use context clues or general phrasing
-   - Make the email feel complete and ready to send as-is
-   - IMPORTANT: DO NOT include bold words as they turn out with double stars in the end (**). So please donot include bold words in the email.
-
-Generate both subject line and email body. Make sure both are complete and professional without any placeholder text.`,
-    
-    emailPurpose: 'Professional outreach for partnership opportunities',
-    callToAction: 'Schedule a brief 15-minute call to discuss potential collaboration',
+    name: 'Professional Outreach Specialist',
+    systemPrompt: DEFAULT_AGENT_CONFIG.systemPrompt,
+    emailTemplate: DEFAULT_AGENT_CONFIG.emailTemplate,
+    emailPurpose: 'Professional outreach and relationship building',
     temperature: 0.7,
     maxTokens: 500
   });
@@ -167,13 +82,8 @@ Generate both subject line and email body. Make sure both are complete and profe
   // Field Mapping State
   const [fieldMapping, setFieldMapping] = useState({
     email: '',
-    name: '',
-    company: '',
-    role: '',
-    industry: '',
     additional_info: ''
   });
-
   // Generated emails storage
   const [generatedEmails, setGeneratedEmails] = useState([]);
   const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 2: Configure, 3: Preview, 4: Send, 5: Results
@@ -553,51 +463,32 @@ Generate both subject line and email body. Make sure both are complete and profe
     }
   };
 
-  // Add this function before your renderUploadStep function
   const downloadDummyData = () => {
     const dummyData = [
       {
         email: 'hi.jaweria@gmail.com',
-        name: 'Dr. Jaweria Hassan',
-        company: 'University of Punjab',
-        role: 'Associate Professor of Computer Science',
-        industry: 'Higher Education',
-        additional_info: 'Specializes in artificial intelligence and machine learning applications in healthcare. Published 45+ peer-reviewed papers. Currently leading a $2.3M NSF grant on AI-driven diagnostic systems. PhD from Stanford University. Member of IEEE and ACM.'
+        additional_info: 'Dr. Jaweria Hassan - Associate Professor of Computer Science at University of Punjab. Specializes in artificial intelligence and machine learning applications in healthcare. Published 45+ peer-reviewed papers. Currently leading a $2.3M NSF grant on AI-driven diagnostic systems. PhD from Stanford University. Member of IEEE and ACM.'
       },
       {
         email: 'muhammadsaad2387@gmail.com',
-        name: 'Prof. Muhammad Saad Ahmad',
-        company: 'Lahore University of Management Sciences',
-        role: 'Professor of Data Science',
-        industry: 'Higher Education',
-        additional_info: 'Expert in big data analytics and computational statistics. Department Head with 12 years of experience. Author of \'Modern Statistical Computing\' textbook. Runs the Data Science Research Lab with 15+ graduate students. PhD from MIT, former Google Research scientist.'
+        additional_info: 'Prof. Muhammad Saad Ahmad - Professor of Data Science at Lahore University of Management Sciences. Expert in big data analytics and computational statistics. Department Head with 12 years of experience. Author of "Modern Statistical Computing" textbook. Runs the Data Science Research Lab with 15+ graduate students. PhD from MIT, former Google Research scientist.'
       },
       {
         email: 'jaweriab94@gmail.com',
-        name: 'Dr. Jaweria Batool',
-        company: 'Information Technology University',
-        role: 'Assistant Professor of Software Engineering',
-        industry: 'Higher Education',
-        additional_info: 'Focuses on software architecture and distributed systems. Rising star with 20+ publications in top-tier conferences. Recipient of IEEE Early Career Award 2023. PhD from University of Toronto. Active in open-source community with 50K+ GitHub followers.'
+        additional_info: 'Dr. Jaweria Batool - Assistant Professor of Software Engineering at Information Technology University. Focuses on software architecture and distributed systems. Rising star with 20+ publications in top-tier conferences. Recipient of IEEE Early Career Award 2023. PhD from University of Toronto. Active in open-source community with 50K+ GitHub followers.'
       },
       {
         email: 'jaweriab.codes@gmail.com',
-        name: 'Prof. Jaweria Butt',
-        company: 'COMSATS University Islamabad',
-        role: 'Professor of Cybersecurity',
-        industry: 'Higher Education',
-        additional_info: 'Leading researcher in network security and cryptography. 15+ years in academia and industry. Former security consultant for major banks. Director of Cybersecurity Research Center. PhD from Carnegie Mellon. Holds 8 patents in encryption technologies.'
+        additional_info: 'Prof. Jaweria Butt - Professor of Cybersecurity at COMSATS University Islamabad. Leading researcher in network security and cryptography. 15+ years in academia and industry. Former security consultant for major banks. Director of Cybersecurity Research Center. PhD from Carnegie Mellon. Holds 8 patents in encryption technologies.'
       }
     ];
 
-    // Convert to CSV format
-    const headers = Object.keys(dummyData[0]);
+    const headers = ['email', 'additional_info'];
     const csvContent = [
       headers.join(','),
       ...dummyData.map(row => 
         headers.map(header => {
           const value = row[header];
-          // Escape quotes and wrap in quotes if contains comma or quote
           if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
             return `"${value.replace(/"/g, '""')}"`;
           }
@@ -606,12 +497,11 @@ Generate both subject line and email body. Make sure both are complete and profe
       )
     ].join('\n');
 
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'dummy_contacts.csv');
+    link.setAttribute('download', 'sample_contacts.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -619,7 +509,6 @@ Generate both subject line and email body. Make sure both are complete and profe
     URL.revokeObjectURL(url);
   };
 
-  // Modified renderUploadStep function
   const renderUploadStep = () => (
     <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
@@ -700,14 +589,14 @@ Generate both subject line and email body. Make sure both are complete and profe
 
   const renderConfigureStep = () => (
     <div className="space-y-6">
-      {/* Sender Information */}
+      {/* Simplified Sender Information - Only Name and Bio */}
       <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
           <UserCircle className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
           Sender Information
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Your Name
@@ -716,7 +605,7 @@ Generate both subject line and email body. Make sure both are complete and profe
               type="text"
               value={senderInfo.name}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="John Smith"
+              placeholder="Your name here"
               className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
               style={{ 
                 backgroundColor: 'var(--background)',
@@ -728,110 +617,15 @@ Generate both subject line and email body. Make sure both are complete and profe
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Job Title
-            </label>
-            <input
-              type="text"
-              value={senderInfo.title}
-              onChange={(e) => setSenderInfo(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="CEO, Marketing Director, etc."
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={senderInfo.company}
-              onChange={(e) => setSenderInfo(prev => ({ ...prev, company: e.target.value }))}
-              placeholder="Your Company Ltd."
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Industry
-            </label>
-            <input
-              type="text"
-              value={senderInfo.industry}
-              onChange={(e) => setSenderInfo(prev => ({ ...prev, industry: e.target.value }))}
-              placeholder="Technology, Finance, Healthcare, etc."
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div className="md:col-span-2">
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Brief Bio/Description
             </label>
             <textarea
               value={senderInfo.bio}
               onChange={(e) => setSenderInfo(prev => ({ ...prev, bio: e.target.value }))}
-              placeholder="Brief description about yourself or your role..."
-              rows={3}
+              placeholder="Brief description about yourself, your background, or what you do..."
+              rows={4}
               className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Key Expertise/Skills
-            </label>
-            <input
-              type="text"
-              value={senderInfo.expertise}
-              onChange={(e) => setSenderInfo(prev => ({ ...prev, expertise: e.target.value }))}
-              placeholder="AI, Digital Marketing, Product Development, etc."
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Key Achievements (Optional)
-            </label>
-            <input
-              type="text"
-              value={senderInfo.achievements}
-              onChange={(e) => setSenderInfo(prev => ({ ...prev, achievements: e.target.value }))}
-              placeholder="Awards, certifications, notable projects, etc."
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
               style={{ 
                 backgroundColor: 'var(--background)',
                 borderColor: 'var(--border-medium)',
@@ -852,12 +646,12 @@ Generate both subject line and email body. Make sure both are complete and profe
           }}
         >
           <p className="text-sm" style={{ color: 'var(--primary-active)' }}>
-            💡 <strong>Note:</strong> All fields are optional. The AI will only use the information you provide and won't include placeholder text for empty fields.
+            💡 <strong>Note:</strong> These fields are optional. The AI will only use the information you provide to provide your context in the email.
           </p>
         </div>
       </div>
 
-      {/* Field Mapping */}
+      {/* Simplified Field Mapping - Only Email and Additional Info */}
       <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
           <Settings className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
@@ -865,36 +659,71 @@ Generate both subject line and email body. Make sure both are complete and profe
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.keys(fieldMapping).map((field) => (
-            <div key={field}>
-              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                {field.replace('_', ' ').toUpperCase()}
-                {field === 'email' && <span style={{ color: 'var(--error)' }}> *</span>}
-              </label>
-              <select
-                value={fieldMapping[field]}
-                onChange={(e) => setFieldMapping(prev => ({ ...prev, [field]: e.target.value }))}
-                className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-                style={{ 
-                  backgroundColor: 'var(--background)',
-                  borderColor: 'var(--border-medium)',
-                  color: 'var(--foreground)',
-                  '--tw-ring-color': 'var(--primary-color)'
-                }}
-              >
-                <option value="">Select column</option>
-                {csvHeaders.map(header => (
-                  <option key={header} value={header}>
-                    {header}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              EMAIL <span style={{ color: 'var(--error)' }}> *</span>
+            </label>
+            <select
+              value={fieldMapping.email}
+              onChange={(e) => setFieldMapping(prev => ({ ...prev, email: e.target.value }))}
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
+            >
+              <option value="">Select column</option>
+              {csvHeaders.map(header => (
+                <option key={header} value={header}>
+                  {header}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              ADDITIONAL INFO
+            </label>
+            <select
+              value={fieldMapping.additional_info}
+              onChange={(e) => setFieldMapping(prev => ({ ...prev, additional_info: e.target.value }))}
+              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: 'var(--background)',
+                borderColor: 'var(--border-medium)',
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--primary-color)'
+              }}
+            >
+              <option value="">Select column (optional)</option>
+              {csvHeaders.map(header => (
+                <option key={header} value={header}>
+                  {header}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div 
+          className="mt-4 p-4 rounded-xl"
+          style={{ 
+            backgroundColor: 'var(--primary-lightest)',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: 'var(--primary-lighter)'
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--primary-active)' }}>
+            💡 <strong>Tip:</strong> The "Additional Info" field can contain any context about the recipient - their background, interests, work, achievements, etc. The more detail you provide, the more personalized the emails will be.
+          </p>
         </div>
       </div>
 
-      {/* SMTP Configuration */}
+      {/* Simplified SMTP Configuration - No From Name */}
       <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
           <Mail className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
@@ -983,25 +812,6 @@ Generate both subject line and email body. Make sure both are complete and profe
               }}
             />
           </div>
-          
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              From Name
-            </label>
-            <input
-              type="text"
-              value={smtpConfig.fromName}
-              onChange={(e) => setSmtpConfig(prev => ({ ...prev, fromName: e.target.value }))}
-              placeholder="Your Company Name"
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
         </div>
 
         <div 
@@ -1020,7 +830,7 @@ Generate both subject line and email body. Make sure both are complete and profe
         </div>
       </div>
 
-      {/* Agent Configuration */}
+      {/* Simplified Agent Configuration - No Call-to-Action */}
       <div className="bg-white rounded-2xl border shadow-lg p-8" style={{ borderColor: 'var(--border-light)' }}>
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
           <Bot className="h-6 w-6" style={{ color: 'var(--primary-color)' }} />
@@ -1036,6 +846,7 @@ Generate both subject line and email body. Make sure both are complete and profe
               type="text"
               value={agentConfig.name}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Professional Outreach Specialist"
               className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
               style={{ 
                 backgroundColor: 'var(--background)',
@@ -1054,6 +865,7 @@ Generate both subject line and email body. Make sure both are complete and profe
               type="text"
               value={agentConfig.emailPurpose}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, emailPurpose: e.target.value }))}
+              placeholder="Professional outreach for partnership opportunities"
               className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2"
               style={{ 
                 backgroundColor: 'var(--background)',
@@ -1062,34 +874,20 @@ Generate both subject line and email body. Make sure both are complete and profe
                 '--tw-ring-color': 'var(--primary-color)'
               }}
             />
+            <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+              Describe the purpose of these emails (e.g., "Research collaboration requests", "Client outreach for real estate", "Recruitment for senior roles")
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
-              Call-to-Action
-            </label>
-            <textarea
-              value={agentConfig.callToAction}
-              onChange={(e) => setAgentConfig(prev => ({ ...prev, callToAction: e.target.value }))}
-              rows={2}
-              className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
-              style={{ 
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-medium)',
-                color: 'var(--foreground)',
-                '--tw-ring-color': 'var(--primary-color)'
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
-              System Prompt (Advanced)
+              System Prompt (Advanced) - Define Industry, Tone, and Approach
             </label>
             <textarea
               value={agentConfig.systemPrompt}
               onChange={(e) => setAgentConfig(prev => ({ ...prev, systemPrompt: e.target.value }))}
-              rows={6}
+              rows={8}
+              placeholder="Define your industry, communication style, and approach. Example: 'You are a healthcare outreach specialist focusing on research collaboration. Use professional medical terminology...'"
               className="w-full border rounded-xl px-4 py-3 transition-all focus:outline-none focus:ring-2 resize-none"
               style={{ 
                 backgroundColor: 'var(--background)',
@@ -1098,6 +896,9 @@ Generate both subject line and email body. Make sure both are complete and profe
                 '--tw-ring-color': 'var(--primary-color)'
               }}
             />
+            <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+              This is where you define the industry, expertise, tone, and approach for your AI agent. Be specific about your field and communication style.
+            </p>
           </div>
         </div>
 

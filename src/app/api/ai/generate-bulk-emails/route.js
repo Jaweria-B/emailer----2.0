@@ -77,7 +77,7 @@ export async function POST(request) {
               text: `${systemPrompt}\n\nIMPORTANT: Format your response as a JSON object with the following structure:
               {
                 "subject": "The email subject line",
-                "email": "The full email body"
+                "body": "The full email body"
               }
 
               User Request: ${userPrompt}` 
@@ -95,91 +95,51 @@ export async function POST(request) {
       }
     });
 
-    const responseText = response.text;
-    
-    try {
-      const parsedResponse = JSON.parse(responseText);
-      
-      // Validate response structure
-      if (!parsedResponse.subject || !parsedResponse.email) {
-        throw new Error('Invalid response structure');
-      }
+    let textResponse = response.text || JSON.stringify(response.response);
 
-      // 6. ADD BRANDING IF REQUIRED (Free plan)
-      let emailBody = parsedResponse.email;
-      if (limitCheck.has_branding) {
-        emailBody = emailBody + '\n\n---\nPowered by OpenPromote ⚡';
-      }
+    // console.log('Raw AI Response:', textResponse);
 
-      // 7. TRACK USAGE - INCREMENT PERSONALIZED EMAIL COUNT
-      try {
-        await emailUsageDb.incrementPersonalized(user.id, 1);
-      } catch (error) {
-        console.error('Failed to track personalized email usage:', error);
-        // Don't fail the request if usage tracking fails
-      }
-
-      // 8. RETURN SUCCESS RESPONSE
-      return NextResponse.json({
-        success: true,
-        subject: parsedResponse.subject,
-        email: emailBody,
-        has_branding: limitCheck.has_branding,
-        usage: {
-          remaining: Math.max(0, limitCheck.remaining - 1) // Subtract 1 since we just used one
-        },
-        usage_metadata: {
-          promptTokens: response.usageMetadata?.promptTokenCount || 0,
-          completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
-          totalTokens: response.usageMetadata?.totalTokenCount || 0
-        }
-      });
-
-    } catch (parseError) {
-      // FALLBACK: Try to extract subject and body manually
-      const lines = responseText.split('\n').filter(line => line.trim());
-      let subject = 'Personalized Outreach';
-      let email = responseText;
-
-      const subjectLine = lines.find(line => 
-        line.toLowerCase().includes('subject:') || 
-        line.toLowerCase().includes('subject line:')
-      );
-      
-      if (subjectLine) {
-        subject = subjectLine.replace(/subject:?\s*/i, '').trim();
-        email = responseText.replace(subjectLine, '').trim();
-      }
-
-      // Add branding if required
-      if (limitCheck.has_branding) {
-        email = email + '\n\n---\nPowered by OpenPromote ⚡';
-      }
-
-      // Track usage
-      try {
-        await emailUsageDb.incrementPersonalized(user.id, 1);
-      } catch (error) {
-        console.error('Failed to track personalized email usage:', error);
-      }
-
-      return NextResponse.json({
-        success: true,
-        subject,
-        email,
-        has_branding: limitCheck.has_branding,
-        usage: {
-          remaining: Math.max(0, limitCheck.remaining - 1)
-        },
-        usage_metadata: {
-          promptTokens: response.usageMetadata?.promptTokenCount || 0,
-          completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
-          totalTokens: response.usageMetadata?.totalTokenCount || 0
-        },
-        fallbackParsing: true
-      });
+    // Clean the response - remove markdown code blocks if present
+    textResponse = textResponse.trim();
+    if (textResponse.startsWith('```json')) {
+      textResponse = textResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (textResponse.startsWith('```')) {
+      textResponse = textResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
+    // Parse the JSON
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(textResponse);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', parseError);
+      console.error('Failed to parse:', textResponse);
+      
+      // Try to extract JSON from the response
+      const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsedResponse = JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          throw new Error('Could not parse AI response as valid JSON');
+        }
+      } else {
+        throw new Error('No JSON found in AI response');
+      }
+    }
+
+    // Validate the response has required fields
+    if (!parsedResponse.subject || !parsedResponse.body) {
+      console.error('Invalid response structure:', parsedResponse);
+      throw new Error('AI response missing required fields (subject or body)');
+    }
+
+    // Return the properly structured response
+    return NextResponse.json({
+      subject: parsedResponse.subject,
+      email: parsedResponse.body, // Note: your code uses 'email' not 'body'
+      has_branding: false
+    });
   } catch (error) {
     console.error('Bulk email generation error:', error);
     

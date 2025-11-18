@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Send, Copy, Mail, Settings, Sparkles, User, Building, MessageSquare, Clock, Heart, Briefcase, Shield, Smile, LogOut, UserPlus, LogIn, Users } from 'lucide-react';
-import { createPrompt } from '@/lib/ai-services';
+
 import { AI_PROVIDERS, AI_PROVIDER_INFO } from '@/lib/ai-config';
 import ProviderSelector from '@/components/ProviderSelector';
 import EmailSender from '@/components/EmailSender';
@@ -13,6 +13,7 @@ import EmailOpener from '@/components/EmailOpener';
 import UsageWidget from '@/components/UsageWidget';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useRouter } from 'next/navigation';
+import { createPrompt } from '@/components/prompts/simple-generation/prompt';
 
 const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
     const router = useRouter();

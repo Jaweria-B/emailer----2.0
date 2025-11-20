@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Plus, X, Mail, Users, Settings, ArrowLeft, Check, AlertCircle, Upload, Download, FileText, Eye, EyeOff, User, Server, ChevronDown } from 'lucide-react';
+import { Send, Plus, X, Mail, Users, Settings, ArrowLeft, Check, AlertCircle, Upload, Download, FileText, Eye, EyeOff, User, Server, ChevronDown, Paperclip, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx'; 
 import SenderGuide from './SenderGuide';
 import Button from './button';
@@ -253,6 +253,70 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
     }));
   };
 
+  // ===== FILE SIZE FORMATTER =====
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // ===== HANDLE FILE UPLOAD =====
+  const handleAttachmentUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Check size limit
+    const newFilesSize = files.reduce((sum, file) => sum + file.size, 0);
+    const projectedTotal = totalAttachmentSize + newFilesSize;
+
+    if (projectedTotal > MAX_ATTACHMENT_SIZE) {
+      alert(`Total attachment size would exceed ${formatFileSize(MAX_ATTACHMENT_SIZE)} limit.\nCurrent: ${formatFileSize(totalAttachmentSize)}\nTrying to add: ${formatFileSize(newFilesSize)}`);
+      event.target.value = '';
+      return;
+    }
+
+    // Convert files to base64
+    const processedFiles = await Promise.all(
+      files.map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              filename: file.name,
+              content: reader.result.split(',')[1], // Base64 part only
+              contentType: file.type || 'application/octet-stream',
+              size: file.size,
+              encoding: 'base64'
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      })
+    );
+
+    setAttachments(prev => [...prev, ...processedFiles]);
+    setTotalAttachmentSize(projectedTotal);
+    event.target.value = ''; // Reset input
+  };
+
+  // ===== REMOVE SINGLE ATTACHMENT =====
+  const removeAttachment = (index) => {
+    const fileToRemove = attachments[index];
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setTotalAttachmentSize(prev => prev - fileToRemove.size);
+  };
+
+  // ===== CLEAR ALL ATTACHMENTS =====
+  const clearAllAttachments = () => {
+    if (window.confirm('Remove all attachments?')) {
+      setAttachments([]);
+      setTotalAttachmentSize(0);
+    }
+  };
+
   const sendEmails = async () => {
     const validEmails = emailList.filter(email => email && validateEmail(email));
     
@@ -319,10 +383,11 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              emails: batch,
+              emails: validEmails,
               subject: emailConfig.subject,
               body: personalizedBody,
-              smtpConfig: smtpSettings
+              smtpConfig: smtpSettings,
+              attachments: attachments  
             }),
           });
 
@@ -419,6 +484,9 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
 
   const validEmailCount = emailList.filter(email => email && validateEmail(email)).length;
   const displayedEmails = showAllEmails ? emailList : emailList.slice(0, 5);
+  const [attachments, setAttachments] = useState([]);
+  const [totalAttachmentSize, setTotalAttachmentSize] = useState(0);
+  const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25MB (Gmail limit)
 
   return (
     <div className="email-sender min-h-screen bg-[color:var(--gray-50)] pb-20 rounded-lg">
@@ -674,6 +742,85 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
             >
               Add Email Address
             </Button>
+
+            {/* Attachment Section */}
+            <div className="mt-6 pt-6 border-t border-white/20">
+              <label className="block text-sm text-[color:var(--btn-outline-text)] font-bold mb-3">
+                <Paperclip className="h-4 w-4 inline mr-2" />
+                Email Attachments (Optional)
+              </label>
+              
+              <div className="space-y-3">
+                {/* Upload Button */}
+                <div className="flex gap-3">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleAttachmentUpload}
+                    className="hidden"
+                    id="attachment-upload"
+                    accept="*/*"
+                  />
+                  
+                  <Button
+                    variant="outline"
+                    size="md"
+                    icon={<Upload className="h-4 w-4" />}
+                    onClick={() => document.getElementById('attachment-upload').click()}
+                    disabled={totalAttachmentSize >= MAX_ATTACHMENT_SIZE}
+                    className="flex-1"
+                  >
+                    Attach Files
+                  </Button>
+                  
+                  {attachments.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="md"
+                      icon={<Trash2 className="h-4 w-4" />}
+                      onClick={clearAllAttachments}
+                      className="text-red-300 hover:text-red-400"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+
+                {/* Size Info */}
+                <div className="text-xs text-[color:var(--btn-outline-text)] font-semibold flex items-center justify-between">
+                  <span>Max size: {formatFileSize(MAX_ATTACHMENT_SIZE)}</span>
+                  {totalAttachmentSize > 0 && (
+                    <span className={totalAttachmentSize > MAX_ATTACHMENT_SIZE * 0.8 ? 'text-yellow-300' : ''}>
+                      Used: {formatFileSize(totalAttachmentSize)} ({Math.round((totalAttachmentSize / MAX_ATTACHMENT_SIZE) * 100)}%)
+                    </span>
+                  )}
+                </div>
+
+                {/* Attached Files List */} 
+                {attachments.length > 0 && (
+                  <div className="bg-white/10 rounded-xl py-4 space-y-2 max-h-48 overflow-y-auto">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-white/10 rounded-lg group hover:bg-white/20 transition-all text-[color:var(--btn-outline-text)] border-gray-200 border">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm truncate">{file.filename}</div>
+                            <div className=" text-xs">{formatFileSize(file.size)}</div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<X className="h-3 w-3" />}
+                          onClick={() => removeAttachment(index)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-red-300 hover:text-red-400"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Settings Buttons Row */}
             <div className="mt-6 flex gap-3">

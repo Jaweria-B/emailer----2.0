@@ -67,7 +67,7 @@ export async function POST(request) {
   let transporter = null;
   
   try {
-    const { emails, subject, body, smtpConfig } = await request.json();
+    const { emails, subject, body, smtpConfig, attachments  } = await request.json();
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
       return NextResponse.json({ message: 'No email addresses provided' }, { status: 400 });
@@ -136,6 +136,7 @@ export async function POST(request) {
             subject: subject,
             text: body,
             html: body.replace(/\n/g, '<br>'),
+            attachments: attachments || [] 
           };
 
           await transporter.sendMail(mailOptions);

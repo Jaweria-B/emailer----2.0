@@ -426,12 +426,12 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                         {/* Raw Thoughts */}
                         <div>
                             <label className="block text-white text-sm font-semibold mb-2">
-                                What do you want to say? *
+                                Email Brief *
                             </label>
                             <textarea
                                 value={formData.rawThoughts}
                                 onChange={(e) => handleInputChange('rawThoughts', e.target.value)}
-                                placeholder="e.g., Need to follow up on the project deadline, want to sound professional but not pushy..."
+                                placeholder="Describe what you want to communicate and why.Provide key points, etc."
                                 rows={4}
                                 className="w-full bg-white border border-white/30 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all resize-none"
                                 disabled={!user && !hasFreeEmail}

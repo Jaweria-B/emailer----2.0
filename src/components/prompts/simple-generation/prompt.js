@@ -599,7 +599,6 @@ RAW THOUGHTS: ${formData.rawThoughts}
 ⚙️ EMAIL PARAMETERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${formData.recipient ? `📧 Recipient: ${formData.recipient}` : '📧 Recipient: Not specified - use modern email greeting like "Hi there," or "Hello," or more such greetings that would compensate for the recipients name and would not disturb the email performace or look.'}
 ${formData.senderName ? `✍️ Sender Name: ${formData.senderName}` : '✍️ Sender Name: Not specified (use generic closing)'}
 ${formData.subject ? `📌 Subject Context: ${formData.subject}` : '📌 Subject: Create appropriate subject line'}
 ${formData.context ? `📋 Additional Context: ${formData.context}` : ''}
@@ -627,25 +626,29 @@ ${getLengthInstruction(formData.length)}
 ✉️ EMAIL STRUCTURE REQUIREMENTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. SUBJECT LINE:
+1. GREETING: 
+   - Use context-appropriate greetings like "Hi there," "Hello," "Good morning/afternoon," or "Greetings," based on the tone and relationship. 
+   - Never use "Dear Sir/Madam" or any unrelated or outdated statement.
+
+2. SUBJECT LINE:
    - Create a clear, compelling subject line
    - Make it specific to the purpose and content
    - Use action-oriented language when appropriate
    - Keep it under 60 characters for mobile viewing
 
-2. EMAIL BODY:
+3. EMAIL BODY:
    - Include appropriate greeting if needed
    - Use clear paragraphs with logical flow
    - Make it scannable and easy to read
    - Keep paragraphs short (2-4 sentences)
    - Use white space effectively
 
-3. SIGNATURE:
+4. SIGNATURE:
    ${formData.senderName 
      ? `End with professional closing phrase followed by: "${formData.senderName}"` 
      : 'End with appropriate closing phrase (e.g., "Best regards,") but DO NOT add a signature name since none was provided'}
 
-4. OVERALL FEEL:
+5. OVERALL FEEL:
    - Write as if you personally researched this recipient
    - Make it feel crafted specifically for them
    - Natural and conversational within the professional context

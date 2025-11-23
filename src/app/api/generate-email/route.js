@@ -7,8 +7,13 @@ import {
   sessionDb, 
   anonymousDevicesDb, 
   checkEmailLimit, 
-  emailUsageDb 
+  emailUsageDb,
+  walletDb, 
+  userSubscriptionsDb
 } from '@/lib/database';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL);
 
 export async function POST(request) {
   try {
@@ -25,7 +30,7 @@ export async function POST(request) {
 
     // For authenticated users, check subscription limits
     if (user) {
-      const limitCheck = await checkEmailLimit(user.id, 'simple');
+      const limitCheck = await checkEmailLimit(user.id, 'generation');
       
       if (!limitCheck.allowed) {
         return NextResponse.json(
@@ -176,14 +181,31 @@ export async function POST(request) {
       result.body = result.body + '\n\n---\nPowered by OpenPromote ⚡';
     }
 
-    // Track usage for authenticated users
+    // Track usage
     if (user) {
       try {
-        await emailUsageDb.incrementSimple(user.id);
-        console.log(`✅ Usage tracked for user ${user.id}`);
-      } catch (usageError) {
-        console.error('Failed to track usage:', usageError);
-        // Don't fail the request if usage tracking fails
+        const subscription = await userSubscriptionsDb.getCurrent(user.id);
+        
+        if (subscription.plan_name === 'Free') {
+          await emailUsageDb.incrementGeneration(user.id);
+        } else if (subscription.plan_name === 'Pro') {
+          await walletDb.deduct(
+            user.id,
+            subscription.price_per_generation,
+            'generation',
+            `Generated: ${result.subject}`
+          );
+          
+          await sql`
+            UPDATE email_usage
+            SET total_spent = total_spent + ${subscription.price_per_generation}
+            WHERE user_id = ${user.id} 
+              AND period_start <= NOW() 
+              AND period_end >= NOW()
+          `;
+        }
+      } catch (error) {
+        console.error('Failed to track usage:', error);
       }
     } else {
       // Save device ID for anonymous users

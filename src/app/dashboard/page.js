@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Mail, User, Calendar, Activity, LogOut, MessageSquare, 
-  TrendingUp, Zap, AlertTriangle, Crown, ArrowRight, CheckCircle2 
+  TrendingUp, Zap, AlertTriangle, Crown, ArrowRight, CheckCircle2, Wallet 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/providers/AuthProvider';
@@ -132,10 +132,16 @@ const Dashboard = () => {
     );
   }
 
-  const simplePercentage = usageData ? getUsagePercentage(usageData.simple_emails_used, usageData.simple_emails_limit) : 0;
-  const personalizedPercentage = usageData ? getUsagePercentage(usageData.personalized_emails_used, usageData.personalized_emails_limit) : 0;
-  const showSimpleWarning = usageData ? shouldShowWarning(usageData.simple_emails_remaining, usageData.simple_emails_limit) : false;
-  const showPersonalizedWarning = usageData ? shouldShowWarning(usageData.personalized_emails_remaining, usageData.personalized_emails_limit) : false;
+  // Handle both Free and Pro plans
+  const isFree = usageData?.plan_type === 'free';
+  const isPro = usageData?.plan_type === 'pro';
+
+  // Free plan percentages
+  const simplePercentage = isFree && usageData ? getUsagePercentage(usageData.generations_used, usageData.generations_limit) : 0;
+  const showSimpleWarning = isFree && usageData ? shouldShowWarning(usageData.generations_remaining, usageData.generations_limit) : false;
+
+  // Pro plan - no percentages needed
+  const isLowBalance = isPro && usageData ? usageData.wallet_balance < 100 : false;
 
   return (
     <PageWrapper>
@@ -180,6 +186,37 @@ const Dashboard = () => {
           </div>
 
           {/* Warning Banners */}
+
+          {/* Low Balance Warning for Pro */}
+          {isLowBalance && (
+            <div className="mb-4 sm:mb-6">
+              <div 
+                className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                style={{ 
+                  backgroundColor: 'var(--warning-light)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: 'var(--warning)'
+                }}
+              >
+                <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--warning)' }}>
+                    Low wallet balance! Add credits to continue using the service.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => router.push('/bundles')}
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Buy Credits
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
             <div className="mb-4 sm:mb-6 space-y-3">
               {showSimpleWarning && usageData.simple_emails_remaining > 0 && (
@@ -276,20 +313,29 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                    Simple Emails
+                    {isPro ? 'Wallet Balance' : 'Email Generations'}
                   </p>
                   <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-                    {usageData ? `${usageData.simple_emails_used}/${usageData.simple_emails_limit}` : '0/0'}
+                    {isFree && usageData 
+                      ? `${usageData.generations_used}/${usageData.generations_limit}` 
+                      : isPro && usageData && usageData.wallet_balance !== undefined
+                      ? `${usageData.currency || 'PKR'} ${Number(usageData.wallet_balance).toFixed(0)}`
+                      : '0'
+                    }
                   </p>
                 </div>
               </div>
               <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {usageData ? `${usageData.simple_emails_remaining} remaining` : 'No data'}
+                  {isFree && usageData 
+                    ? `${usageData.generations_remaining} remaining` 
+                    : isPro && usageData && usageData.total_spent !== undefined
+                    ? `Spent: ${usageData.currency || 'PKR'} ${Number(usageData.total_spent).toFixed(0)}`
+                    : 'No data'
+                  }
                 </p>
               </div>
             </div>
-
             {/* Personalized Emails Card - Commented out but keeping structure */}
             {/* <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
               <div className="flex items-center gap-3 mb-3">
@@ -388,10 +434,15 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
-                    Simple Emails
+                    {isPro ? 'Wallet Balance' : 'Email Generations'}
                   </span>
                   <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
-                    {usageData ? `${usageData.simple_emails_used} / ${usageData.simple_emails_limit}` : '0 / 0'}
+                    {isFree && usageData 
+                      ? `${usageData.generations_used} / ${usageData.generations_limit}` 
+                      : isPro && usageData && usageData.wallet_balance !== undefined
+                      ? `${usageData.currency || 'PKR'} ${Number(usageData.wallet_balance).toFixed(2)}`
+                      : '0 / 0'
+                    }
                   </span>
                 </div>
                 <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
@@ -404,7 +455,12 @@ const Dashboard = () => {
                   />
                 </div>
                 <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                  {usageData ? `${usageData.simple_emails_remaining} remaining` : 'No limit data'}
+                  {isFree && usageData 
+                    ? `${usageData.generations_remaining} remaining` 
+                    : isPro && usageData && usageData.total_spent !== undefined
+                    ? `Total spent: ${usageData.currency || 'PKR'} ${Number(usageData.total_spent).toFixed(2)}`
+                    : 'No data'
+                  }
                 </p>
               </div>
 
@@ -465,6 +521,16 @@ const Dashboard = () => {
                     className="w-full sm:w-auto"
                   >
                     Upgrade to Pro
+                  </Button>
+                )}
+                {subscriptionData?.plan_name === 'Pro' && (
+                  <Button
+                    onClick={() => router.push('/bundles')}
+                    variant="primary"
+                    icon={<Wallet className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    className="w-full sm:w-auto"
+                  >
+                    Buy Credits
                   </Button>
                 )}
               </div>

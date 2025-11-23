@@ -703,7 +703,7 @@ export { initializeSchema, initializeBulkEmailSchema };
 // -----------------------
 export const subscriptionPlansDb = {
   getAll: async () => {
-    const result = await sql`SELECT * FROM subscription_plans WHERE is_active = TRUE ORDER BY price ASC`;
+    const result = await sql`SELECT * FROM subscription_plans WHERE is_active = TRUE ORDER BY price_per_generation ASC`;
     return result;
   },
 
@@ -748,11 +748,12 @@ export const userSubscriptionsDb = {
       SELECT 
         us.*,
         sp.name as plan_name,
-        sp.price,
-        sp.billing_cycle,
-        sp.simple_email_limit,
-        sp.personalized_email_limit,
-        sp.has_branding
+        sp.generation_limit,           
+        sp.sends_per_generation,       
+        sp.price_per_generation,       
+        sp.price_per_send,             
+        sp.has_branding,
+        sp.currency                    
       FROM user_subscriptions us
       JOIN subscription_plans sp ON us.plan_id = sp.id
       WHERE us.user_id = ${userId} AND us.status = 'active'
@@ -801,14 +802,14 @@ export const emailUsageDb = {
   create: async (userId, subscriptionId, periodStart, periodEnd) => {
     const result = await sql`
       INSERT INTO email_usage 
-      (user_id, subscription_id, simple_emails_used, personalized_emails_used, period_start, period_end)
-      VALUES (${userId}, ${subscriptionId}, 0, 0, ${periodStart.toISOString()}, ${periodEnd.toISOString()})
+      (user_id, subscription_id, generations_count, sends_count, total_spent, period_start, period_end)
+      VALUES (${userId}, ${subscriptionId}, 0, 0, 0.00, ${periodStart.toISOString()}, ${periodEnd.toISOString()})
       RETURNING *
     `;
     return result[0];
   },
 
-  incrementSimple: async (userId) => {
+  incrementGeneration: async (userId) => {
     const usage = await emailUsageDb.getCurrent(userId);
     if (!usage) {
       throw new Error('No active usage record found');
@@ -816,14 +817,15 @@ export const emailUsageDb = {
 
     const result = await sql`
       UPDATE email_usage
-      SET simple_emails_used = simple_emails_used + 1, updated_at = CURRENT_TIMESTAMP
+      SET generations_count = generations_count + 1, 
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ${usage.id}
       RETURNING *
     `;
     return result[0];
   },
 
-  incrementPersonalized: async (userId, count = 1) => {
+  incrementSends: async (userId, sendCount = 1) => {
     const usage = await emailUsageDb.getCurrent(userId);
     if (!usage) {
       throw new Error('No active usage record found');
@@ -831,7 +833,8 @@ export const emailUsageDb = {
 
     const result = await sql`
       UPDATE email_usage
-      SET personalized_emails_used = personalized_emails_used + ${count}, updated_at = CURRENT_TIMESTAMP
+      SET sends_count = sends_count + ${sendCount}, 
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ${usage.id}
       RETURNING *
     `;
@@ -845,52 +848,79 @@ export const emailUsageDb = {
     }
 
     const usage = await emailUsageDb.getCurrent(userId);
-    if (!usage) {
+    
+    // FREE PLAN
+    if (subscription.plan_name === 'Free') {
+      const generationsUsed = usage ? usage.generations_count : 0;
+      const sendsUsed = usage ? usage.sends_count : 0;
+      
+      const maxSends = generationsUsed * subscription.sends_per_generation;
+      
       return {
-        simple_emails_used: 0,
-        simple_emails_limit: subscription.simple_email_limit,
-        simple_emails_remaining: subscription.simple_email_limit,
-        personalized_emails_used: 0,
-        personalized_emails_limit: subscription.personalized_email_limit,
-        personalized_emails_remaining: subscription.personalized_email_limit,
+        plan_type: 'free',
+        plan_name: subscription.plan_name,
+        
+        // Generation tracking
+        generations_used: generationsUsed,
+        generations_limit: subscription.generation_limit,
+        generations_remaining: Math.max(0, subscription.generation_limit - generationsUsed),
+        
+        // Send tracking
+        sends_used: sendsUsed,
+        sends_limit: maxSends, // Dynamic based on generations
+        sends_remaining: Math.max(0, maxSends - sendsUsed),
+        sends_per_generation: subscription.sends_per_generation,
+        
         period_end: subscription.current_period_end,
-        has_branding: subscription.has_branding
+        has_branding: subscription.has_branding,
+        currency: subscription.currency
       };
     }
-
-    return {
-      simple_emails_used: usage.simple_emails_used,
-      simple_emails_limit: subscription.simple_email_limit,
-      simple_emails_remaining: Math.max(0, subscription.simple_email_limit - usage.simple_emails_used),
-      personalized_emails_used: usage.personalized_emails_used,
-      personalized_emails_limit: subscription.personalized_email_limit,
-      personalized_emails_remaining: Math.max(0, subscription.personalized_email_limit - usage.personalized_emails_used),
-      period_end: subscription.current_period_end,
-      has_branding: subscription.has_branding,
-      plan_name: subscription.plan_name,
-      price: subscription.price
-    };
+    
+    // PRO PLAN
+    else if (subscription.plan_name === 'Pro') {
+      const wallet = await walletDb.getBalance(userId);
+      const totalSpent = usage ? usage.total_spent : 0;
+      
+      return {
+        plan_type: 'pro',
+        plan_name: subscription.plan_name,
+        
+        // Wallet tracking
+        wallet_balance: wallet.balance,
+        total_spent: totalSpent,
+        
+        // Pricing
+        price_per_generation: subscription.price_per_generation,
+        price_per_send: subscription.price_per_send,
+        
+        period_end: subscription.current_period_end,
+        has_branding: subscription.has_branding,
+        currency: subscription.currency
+      };
+    }
+    
+    return null;
   }
 };
 
 // -----------------------
 // Helper function to check if user can generate email
 // -----------------------
-export const checkEmailLimit = async (userId, emailType = 'simple') => {
+export const checkEmailLimit = async (userId, action = 'generation', sendCount = 1) => {
   const subscription = await userSubscriptionsDb.getCurrent(userId);
   
   if (!subscription) {
     return {
       allowed: false,
       reason: 'No active subscription found',
-      remaining: 0,
-      limit: 0
+      remaining: 0
     };
   }
 
   const usage = await emailUsageDb.getCurrent(userId);
   
-  // If no usage record exists for current period, create one
+  // Create usage record if doesn't exist
   if (!usage) {
     await emailUsageDb.create(
       userId,
@@ -898,46 +928,84 @@ export const checkEmailLimit = async (userId, emailType = 'simple') => {
       new Date(subscription.current_period_start),
       new Date(subscription.current_period_end)
     );
-    
-    // Return allowed since we just created fresh usage
-    return {
-      allowed: true,
-      remaining: emailType === 'simple' 
-        ? subscription.simple_email_limit 
-        : subscription.personalized_email_limit,
-      limit: emailType === 'simple' 
-        ? subscription.simple_email_limit 
-        : subscription.personalized_email_limit,
-      has_branding: subscription.has_branding
-    };
   }
 
-  // Check limits
-  if (emailType === 'simple') {
-    const remaining = subscription.simple_email_limit - usage.simple_emails_used;
-    return {
-      allowed: remaining > 0,
-      remaining: Math.max(0, remaining),
-      limit: subscription.simple_email_limit,
-      has_branding: subscription.has_branding,
-      reason: remaining <= 0 ? 'Simple email limit reached' : null
-    };
-  } else if (emailType === 'personalized') {
-    const remaining = subscription.personalized_email_limit - usage.personalized_emails_used;
-    return {
-      allowed: remaining > 0,
-      remaining: Math.max(0, remaining),
-      limit: subscription.personalized_email_limit,
-      has_branding: subscription.has_branding,
-      reason: remaining <= 0 ? 'Personalized email limit reached' : null
-    };
+  // FREE PLAN LOGIC
+  if (subscription.plan_name === 'Free') {
+    const generationsUsed = usage ? usage.generations_count : 0;
+    const sendsUsed = usage ? usage.sends_count : 0;
+    
+    if (action === 'generation') {
+      // Check generation limit
+      const remaining = subscription.generation_limit - generationsUsed;
+      return {
+        allowed: remaining > 0,
+        remaining: Math.max(0, remaining),
+        limit: subscription.generation_limit,
+        has_branding: subscription.has_branding,
+        reason: remaining <= 0 ? 'Generation limit reached. Upgrade to Pro for unlimited.' : null
+      };
+    }
+    
+    else if (action === 'send') {
+      // Check send limit (generations × sends_per_generation)
+      const maxSends = generationsUsed * subscription.sends_per_generation;
+      const remaining = maxSends - sendsUsed;
+      
+      // Also check if user wants to send more than allowed per email
+      if (sendCount > subscription.sends_per_generation) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: subscription.sends_per_generation,
+          has_branding: subscription.has_branding,
+          reason: `Free plan allows max ${subscription.sends_per_generation} recipients per email`
+        };
+      }
+      
+      return {
+        allowed: remaining >= sendCount,
+        remaining: Math.max(0, remaining),
+        limit: maxSends,
+        has_branding: subscription.has_branding,
+        reason: remaining < sendCount ? 'Send limit reached for generated emails' : null
+      };
+    }
+  }
+  
+  // PRO PLAN LOGIC
+  else if (subscription.plan_name === 'Pro') {
+    const wallet = await walletDb.getBalance(userId);
+    
+    if (action === 'generation') {
+      const required = subscription.price_per_generation;
+      return {
+        allowed: wallet.balance >= required,
+        remaining: wallet.balance,
+        limit: 0, // No limit for Pro
+        has_branding: subscription.has_branding,
+        cost: required,
+        reason: wallet.balance < required ? `Insufficient balance. Need PKR ${required}` : null
+      };
+    }
+    
+    else if (action === 'send') {
+      const required = subscription.price_per_send * sendCount;
+      return {
+        allowed: wallet.balance >= required,
+        remaining: wallet.balance,
+        limit: 0,
+        has_branding: subscription.has_branding,
+        cost: required,
+        reason: wallet.balance < required ? `Insufficient balance. Need PKR ${required}` : null
+      };
+    }
   }
 
   return {
     allowed: false,
-    reason: 'Invalid email type',
-    remaining: 0,
-    limit: 0
+    reason: 'Invalid plan configuration',
+    remaining: 0
   };
 };
 
@@ -968,5 +1036,137 @@ export const createDefaultSubscription = async (userId) => {
   } catch (error) {
     console.error('Error creating default subscription:', error);
     throw error;
+  }
+};
+
+// -----------------------
+// Wallet operations
+// -----------------------
+export const walletDb = {
+  getBalance: async (userId) => {
+    const result = await sql`
+      SELECT balance, currency FROM user_wallet WHERE user_id = ${userId}
+    `;
+    return result[0] || { balance: 0, currency: 'PKR' };
+  },
+
+  addCredits: async (userId, amount, description = 'Credit added') => {
+    const wallet = await sql`
+      SELECT balance FROM user_wallet WHERE user_id = ${userId}
+    `;
+    
+    const result = await sql`
+      UPDATE user_wallet
+      SET balance = balance + ${amount}, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+      RETURNING *
+    `;
+
+    // Log transaction
+    await sql`
+      INSERT INTO transactions 
+      (user_id, action_type, amount, wallet_balance_before, wallet_balance_after, notes)
+      VALUES (
+        ${userId}, 
+        'credit_add', 
+        ${amount}, 
+        ${wallet[0]?.balance || 0}, 
+        ${result[0].balance},
+        ${description}
+      )
+    `;
+
+    return result[0];
+  },
+
+  deduct: async (userId, amount, actionType, notes = null) => {
+    const wallet = await sql`
+      SELECT balance FROM user_wallet WHERE user_id = ${userId} FOR UPDATE
+    `;
+
+    if (!wallet[0] || wallet[0].balance < amount) {
+      throw new Error('Insufficient balance');
+    }
+
+    const result = await sql`
+      UPDATE user_wallet
+      SET balance = balance - ${amount}, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+      RETURNING *
+    `;
+
+    // Log transaction
+    await sql`
+      INSERT INTO transactions 
+      (user_id, action_type, amount, wallet_balance_before, wallet_balance_after, notes)
+      VALUES (
+        ${userId}, 
+        ${actionType}, 
+        ${-amount}, 
+        ${wallet[0].balance}, 
+        ${result[0].balance},
+        ${notes}
+      )
+    `;
+
+    return result[0];
+  },
+
+  create: async (userId, initialBalance = 0) => {
+    const result = await sql`
+      INSERT INTO user_wallet (user_id, balance, currency)
+      VALUES (${userId}, ${initialBalance}, 'PKR')
+      ON CONFLICT (user_id) DO NOTHING
+      RETURNING *
+    `;
+    return result[0];
+  }
+};
+
+// -----------------------
+// Credit Bundles
+// -----------------------
+export const creditBundlesDb = {
+  getAll: async () => {
+    const result = await sql`
+      SELECT * FROM credit_bundles WHERE is_active = TRUE ORDER BY price ASC
+    `;
+    return result;
+  },
+
+  getById: async (bundleId) => {
+    const result = await sql`
+      SELECT * FROM credit_bundles WHERE id = ${bundleId}
+    `;
+    return result[0] || null;
+  }
+};
+
+// -----------------------
+// Transactions
+// -----------------------
+export const transactionsDb = {
+  getByUser: async (userId, limit = 50) => {
+    const result = await sql`
+      SELECT * FROM transactions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `;
+    return result;
+  },
+
+  getSummary: async (userId, startDate, endDate) => {
+    const result = await sql`
+      SELECT 
+        action_type,
+        COUNT(*) as count,
+        SUM(ABS(amount)) as total_amount
+      FROM transactions
+      WHERE user_id = ${userId}
+        AND created_at BETWEEN ${startDate} AND ${endDate}
+      GROUP BY action_type
+    `;
+    return result;
   }
 };

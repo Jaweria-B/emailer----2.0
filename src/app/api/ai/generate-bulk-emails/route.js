@@ -1,7 +1,10 @@
 // app/api/ai/generate-bulk-emails/route.js
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { sessionDb, checkEmailLimit, emailUsageDb } from '@/lib/database';
+import { sessionDb, checkEmailLimit, emailUsageDb, userSubscriptionsDb, walletDb } from '@/lib/database';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL);
 
 export async function POST(request) {
   try {
@@ -32,17 +35,15 @@ export async function POST(request) {
     }
 
     // 2. CHECK SUBSCRIPTION LIMITS
-    const limitCheck = await checkEmailLimit(user.id, 'personalized');
+    const limitCheck = await checkEmailLimit(user.id, 'generation');
     
     if (!limitCheck.allowed) {
       return NextResponse.json(
         { 
-          error: limitCheck.reason || 'Personalized email generation limit reached',
+          error: limitCheck.reason || 'Email generation limit reached',
           limit: limitCheck.limit,
-          used: limitCheck.used,
           remaining: 0,
-          upgrade_required: true,
-          limit_type: 'personalized'
+          upgrade_required: true
         },
         { status: 403 }
       );
@@ -97,8 +98,6 @@ export async function POST(request) {
 
     let textResponse = response.text || JSON.stringify(response.response);
 
-    // console.log('Raw AI Response:', textResponse);
-
     // Clean the response - remove markdown code blocks if present
     textResponse = textResponse.trim();
     if (textResponse.startsWith('```json')) {
@@ -134,12 +133,53 @@ export async function POST(request) {
       throw new Error('AI response missing required fields (subject or body)');
     }
 
-    // Return the properly structured response
+    // 6. ADD BRANDING IF REQUIRED
+    let emailBody = parsedResponse.body;
+    if (limitCheck.has_branding) {
+      emailBody = emailBody + '\n\n---\nPowered by OpenPromote ⚡';
+    }
+
+    // 7. TRACK USAGE
+    try {
+      const subscription = await userSubscriptionsDb.getCurrent(user.id);
+      
+      if (subscription.plan_name === 'Free') {
+        // Free plan: Increment generation count
+        await emailUsageDb.incrementGeneration(user.id);
+      } else if (subscription.plan_name === 'Pro') {
+        // Pro plan: Deduct from wallet
+        await walletDb.deduct(
+          user.id,
+          subscription.price_per_generation,
+          'generation',
+          `Bulk generated: ${parsedResponse.subject}`
+        );
+        
+        // Track spending
+        await sql`
+          UPDATE email_usage
+          SET total_spent = total_spent + ${subscription.price_per_generation},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ${user.id} 
+            AND period_start <= NOW() 
+            AND period_end >= NOW()
+        `;
+      }
+    } catch (trackingError) {
+      console.error('Failed to track usage:', trackingError);
+      // Don't fail the request if tracking fails
+    }
+
+    // 8. Return the properly structured response
     return NextResponse.json({
       subject: parsedResponse.subject,
-      email: parsedResponse.body, // Note: your code uses 'email' not 'body'
-      has_branding: false
+      email: emailBody,
+      has_branding: limitCheck.has_branding,
+      usage: {
+        remaining: Math.max(0, limitCheck.remaining - (limitCheck.cost || 1))
+      }
     });
+    
   } catch (error) {
     console.error('Bulk email generation error:', error);
     

@@ -1,12 +1,8 @@
-// ===========================================
-// FILE 3: app/api/usage/check/route.js
-// ===========================================
 import { NextResponse } from 'next/server';
 import { sessionDb, checkEmailLimit } from '@/lib/database';
 
 export async function POST(request) {
   try {
-    // Get session token from cookies
     const sessionToken = request.cookies.get('session_token')?.value;
     
     if (!sessionToken) {
@@ -16,7 +12,6 @@ export async function POST(request) {
       );
     }
 
-    // Verify session and get user
     const user = await sessionDb.findValid(sessionToken);
     
     if (!user) {
@@ -26,18 +21,16 @@ export async function POST(request) {
       );
     }
 
-    // Get email type from request body
-    const { email_type } = await request.json();
+    const { action = 'generation', sendCount = 1 } = await request.json();
     
-    if (!email_type || !['simple', 'personalized'].includes(email_type)) {
+    if (!action || !['generation', 'send'].includes(action)) {
       return NextResponse.json(
-        { error: 'email_type must be either "simple" or "personalized"' },
+        { error: 'action must be either "generation" or "send"' },
         { status: 400 }
       );
     }
 
-    // Check if user can generate this type of email
-    const limitCheck = await checkEmailLimit(user.id, email_type);
+    const limitCheck = await checkEmailLimit(user.id, action, sendCount);
 
     return NextResponse.json({
       success: true,
@@ -45,6 +38,7 @@ export async function POST(request) {
       remaining: limitCheck.remaining,
       limit: limitCheck.limit,
       has_branding: limitCheck.has_branding,
+      cost: limitCheck.cost,
       reason: limitCheck.reason
     });
   } catch (error) {

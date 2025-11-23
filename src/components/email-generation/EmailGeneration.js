@@ -15,7 +15,7 @@ import UpgradeModal from '@/components/UpgradeModal';
 import { useRouter } from 'next/navigation';
 import { createPrompt } from '@/components/prompts/simple-generation/prompt';
 
-const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
+const EmailGeneration = ({ user }) => {
     const router = useRouter();
     const [subscriptionData, setSubscriptionData] = useState(null);
     const [usageData, setUsageData] = useState(null);
@@ -177,10 +177,10 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
             return false;
         }
     
-        if (formData.recipient.length > MAX_RECIPIENT) {
-            alert(`Recipient name is too long. Please keep it under ${MAX_RECIPIENT} characters.`);
-            return false;
-        }
+        // if (formData.recipient.length > MAX_RECIPIENT) {
+        //     alert(`Recipient name is too long. Please keep it under ${MAX_RECIPIENT} characters.`);
+        //     return false;
+        // }
     
         if (formData.senderName.length > MAX_SENDER) {
             alert(`Your name is too long. Please keep it under ${MAX_SENDER} characters.`);
@@ -439,7 +439,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                         </div>
 
                         {/* Recipient */}
-                        <div>
+                        {/* <div>
                             <label className="block text-white text-sm font-semibold mb-2">
                                 <User className="h-4 w-4 inline mr-1 text-white" />
                                 Recipient Name
@@ -452,7 +452,7 @@ const EmailGeneration = ({ user, onLogout, isLoadingUser }) => {
                                 className="w-full bg-white border border-white/30 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
                                 disabled={!user && !hasFreeEmail}
                             />
-                        </div>
+                        </div> */}
 
                         {/* Subject Context */}
                         <div>

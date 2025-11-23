@@ -1,261 +1,189 @@
 "use client"
 import React from 'react';
-import { TrendingUp, Users, Crown, AlertCircle, Mail, Zap } from 'lucide-react';
+import { TrendingUp, Crown, AlertCircle, Wallet } from 'lucide-react';
 
-/**
- * Unified Usage Widget - Works for both Simple and Personalized email pages
- * @param {Object} usage - Usage data from API
- * @param {Object} subscription - Subscription data from API
- * @param {Function} onUpgradeClick - Callback for upgrade button
- * @param {string} context - 'simple' or 'personalized' - determines which email type to emphasize
- * @param {number} totalToGenerate - For bulk emails, how many emails will be generated
- */
-const UsageWidget = ({ 
-  usage, 
-  subscription, 
-  onUpgradeClick, 
-  context = 'simple',
-  totalToGenerate = 0 
-}) => {
+const UsageWidget = ({ usage, subscription, onUpgradeClick }) => {
   if (!usage || !subscription) return null;
 
-  const simplePercentage = (usage.simple_emails_used / usage.simple_emails_limit) * 100;
-  const personalizedPercentage = usage.personalized_emails_limit > 0 
-    ? (usage.personalized_emails_used / usage.personalized_emails_limit) * 100 
-    : 0;
+  const isFree = usage.plan_type === 'free';
+  const isPro = usage.plan_type === 'pro';
 
-  const isApproachingLimit = usage.simple_emails_remaining <= 5 || 
-    (usage.personalized_emails_limit > 0 && usage.personalized_emails_remaining <= 5);
+  // FREE PLAN UI
+  if (isFree) {
+    const generationPercentage = (usage.generations_used / usage.generations_limit) * 100;
+    const sendPercentage = usage.sends_limit > 0 
+      ? (usage.sends_used / usage.sends_limit) * 100 
+      : 0;
 
-  const canGenerateAll = usage.personalized_emails_remaining >= totalToGenerate;
-  const willGeneratePartial = totalToGenerate > 0 && 
-    usage.personalized_emails_remaining > 0 && 
-    usage.personalized_emails_remaining < totalToGenerate;
-
-  const isPro = subscription.plan_name?.toLowerCase() === 'pro';
-  const hasPersonalizedAccess = usage.personalized_emails_limit > 0;
-
-  // Choose icon based on context
-  const HeaderIcon = context === 'personalized' ? Users : TrendingUp;
-
-  return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 shadow-xl">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <HeaderIcon className="h-5 w-5 text-purple-300" />
-          <h3 className="text-lg font-semibold text-white">Your Usage</h3>
-        </div>
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-          isPro 
-            ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30' 
-            : 'bg-white/10 border border-white/20'
-        }`}>
-          {isPro ? <Crown className="h-4 w-4 text-yellow-400" /> : <Zap className="h-4 w-4 text-purple-300" />}
-          <span className="text-sm font-medium text-white">{subscription.plan_name}</span>
-        </div>
-      </div>
-
-      {/* Warning Banners */}
-      {context === 'personalized' && !hasPersonalizedAccess && (
-        <div className="mb-4 p-4 bg-purple-500/20 border border-purple-500/30 rounded-xl">
-          <div className="flex items-start gap-3">
-            <Crown className="h-5 w-5 text-purple-300 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-purple-100 font-semibold text-sm">Upgrade Required</p>
-              <p className="text-purple-200 text-xs mt-1">
-                Personalized email generation is only available on Pro plan
-              </p>
-              <button
-                onClick={onUpgradeClick}
-                className="mt-2 text-xs bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-medium py-1.5 px-3 rounded-lg transition-all"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
+    return (
+      <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-purple-300" />
+            <h3 className="text-lg font-semibold text-white">Your Usage</h3>
           </div>
+          <span className="text-xs bg-white/20 px-2 py-1 rounded-full text-white">
+            FREE
+          </span>
         </div>
-      )}
 
-      {context === 'personalized' && willGeneratePartial && (
-        <div className="mb-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-xl flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-orange-300 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-orange-200">
-            <p className="font-medium">Partial Generation</p>
-            <p className="text-xs mt-1">
-              You can generate {usage.personalized_emails_remaining} out of {totalToGenerate} emails with your current limit.
+        {/* Generations */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-purple-200">Email Generations</span>
+            <span className="text-sm font-semibold text-white">
+              {usage.generations_used} / {usage.generations_limit}
+            </span>
+          </div>
+          <div className="w-full bg-white/20 rounded-full h-2.5">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                generationPercentage >= 80 
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                  : generationPercentage >= 60
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                  : 'bg-gradient-to-r from-green-500 to-blue-500'
+              }`}
+              style={{ width: `${Math.min(generationPercentage, 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-purple-300 mt-1">
+            {usage.generations_remaining} generations remaining
+          </p>
+        </div>
+
+        {/* Sends */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-purple-200">Email Sends</span>
+            <span className="text-sm font-semibold text-white">
+              {usage.sends_used} / {usage.sends_limit}
+            </span>
+          </div>
+          <div className="w-full bg-white/20 rounded-full h-2.5">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                sendPercentage >= 80 
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                  : sendPercentage >= 60
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500'
+              }`}
+              style={{ width: `${Math.min(sendPercentage, 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-purple-300 mt-1">
+            {usage.sends_remaining} sends remaining ({usage.sends_per_generation} per email)
+          </p>
+        </div>
+
+        {/* Warning if low */}
+        {(usage.generations_remaining <= 1 || usage.sends_remaining <= 5) && (
+          <div className="mb-4 bg-orange-500/20 border border-orange-500/30 rounded-lg p-3">
+            <p className="text-xs text-orange-200 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Running low! Upgrade to Pro for unlimited usage.
             </p>
           </div>
-        </div>
-      )}
-
-      {isApproachingLimit && (
-        <div className="mb-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-xl flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-orange-300 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-orange-200">
-            <p className="font-medium">Running low on emails!</p>
-            <p className="text-xs mt-1">
-              {context === 'personalized' && usage.personalized_emails_remaining <= 10 && usage.personalized_emails_remaining > 0
-                ? `Only ${usage.personalized_emails_remaining} personalized emails remaining this month.`
-                : 'Consider upgrading to continue generating emails.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {/* Show Personalized first for bulk email page, Simple first for simple email page */}
-        {context === 'personalized' ? (
-          <>
-            {/* Personalized Emails */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-purple-200 flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  Personalized Emails
-                </span>
-                <span className="text-white font-medium">
-                  {usage.personalized_emails_used} / {usage.personalized_emails_limit || 0}
-                </span>
-              </div>
-              {hasPersonalizedAccess ? (
-                <>
-                  <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        personalizedPercentage >= 90 
-                          ? 'bg-gradient-to-r from-red-500 to-orange-500' 
-                          : personalizedPercentage >= 70
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                          : 'bg-gradient-to-r from-purple-500 to-pink-500'
-                      }`}
-                      style={{ width: `${Math.min(personalizedPercentage, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-purple-300 mt-1">
-                    {usage.personalized_emails_remaining} emails remaining
-                  </p>
-                </>
-              ) : (
-                <div className="bg-white/10 rounded-lg p-3 border border-white/20">
-                  <p className="text-xs text-purple-300 text-center">
-                    🔒 Unlock with Pro Plan
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Simple Emails */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-purple-200 flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  Simple Emails
-                </span>
-                <span className="text-white font-medium">
-                  {usage.simple_emails_used} / {usage.simple_emails_limit}
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    simplePercentage >= 90 
-                      ? 'bg-gradient-to-r from-red-500 to-orange-500' 
-                      : simplePercentage >= 70
-                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                      : 'bg-gradient-to-r from-green-500 to-blue-500'
-                  }`}
-                  style={{ width: `${Math.min(simplePercentage, 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-purple-300 mt-1">
-                {usage.simple_emails_remaining} emails remaining
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Simple Emails */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-purple-200">Simple Emails</span>
-                <span className="text-white font-medium">
-                  {usage.simple_emails_used} / {usage.simple_emails_limit}
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    simplePercentage >= 90 
-                      ? 'bg-gradient-to-r from-red-500 to-orange-500' 
-                      : simplePercentage >= 70
-                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                      : 'bg-gradient-to-r from-green-500 to-blue-500'
-                  }`}
-                  style={{ width: `${Math.min(simplePercentage, 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-purple-300 mt-1">
-                {usage.simple_emails_remaining} emails remaining
-              </p>
-            </div>
-
-            {/* Personalized Emails */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-purple-200">Personalized Emails</span>
-                <span className="text-white font-medium">
-                  {usage.personalized_emails_used} / {usage.personalized_emails_limit || 0}
-                </span>
-              </div>
-              {usage.personalized_emails_limit > 0 ? (
-                <>
-                  <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        personalizedPercentage >= 90 
-                          ? 'bg-gradient-to-r from-red-500 to-orange-500' 
-                          : personalizedPercentage >= 70
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                          : 'bg-gradient-to-r from-purple-500 to-pink-500'
-                      }`}
-                      style={{ width: `${Math.min(personalizedPercentage, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-purple-300 mt-1">
-                    {usage.personalized_emails_remaining} emails remaining
-                  </p>
-                </>
-              ) : (
-                <div className="bg-white/10 rounded-lg p-3 border border-white/20">
-                  <p className="text-xs text-purple-300 text-center">
-                    Upgrade to Pro to unlock personalized emails
-                  </p>
-                </div>
-              )}
-            </div>
-          </>
         )}
-      </div>
 
-      {/* Upgrade Button for Free Users */}
-      {!isPro && (
         <button
           onClick={onUpgradeClick}
-          className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
         >
           <Crown className="h-4 w-4" />
-          Upgrade to Pro {context === 'personalized' ? '- $50/month' : ''}
+          Upgrade to Pro
         </button>
-      )}
 
-      {/* Period Info */}
-      <div className="mt-4 pt-4 border-t border-white/20">
-        <p className="text-xs text-purple-300 text-center">
-          Resets on {new Date(subscription.current_period_end).toLocaleDateString()}
-        </p>
+        <div className="mt-4 pt-4 border-t border-white/20">
+          <p className="text-xs text-purple-300 text-center">
+            Resets on {new Date(usage.period_end).toLocaleDateString()}
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // PRO PLAN UI
+  if (isPro) {
+    const isLowBalance = usage.wallet_balance < 100;
+    
+    return (
+      <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-yellow-500/30 p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Crown className="h-5 w-5 text-yellow-400" />
+            <h3 className="text-lg font-semibold text-white">Pro Plan</h3>
+          </div>
+          <span className="text-xs bg-yellow-500/20 px-2 py-1 rounded-full text-yellow-300 border border-yellow-500/30">
+            PRO
+          </span>
+        </div>
+
+        {/* Wallet Balance */}
+        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-yellow-400" />
+              <span className="text-sm text-white">Wallet Balance</span>
+            </div>
+            <span className="text-2xl font-bold text-yellow-400">
+              {usage.currency} {usage.wallet_balance.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Pricing Info */}
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-purple-200">Generation Cost:</span>
+            <span className="text-white font-semibold">
+              {usage.currency} {usage.price_per_generation}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-purple-200">Send Cost (per recipient):</span>
+            <span className="text-white font-semibold">
+              {usage.currency} {usage.price_per_send}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm pt-2 border-t border-white/20">
+            <span className="text-purple-200">Total Spent This Period:</span>
+            <span className="text-white font-semibold">
+              {usage.currency} {usage.total_spent.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Low Balance Warning */}
+        {isLowBalance && (
+          <div className="bg-orange-500/20 border border-orange-500/30 rounded-lg p-3 mb-3">
+            <p className="text-xs text-orange-200 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Low balance! Add credits to continue using the service.
+            </p>
+          </div>
+        )}
+
+        {/* Buy Credits Button */}
+        <button
+          onClick={() => window.location.href = '/bundles'}
+          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+        >
+          <Wallet className="h-4 w-4" />
+          Buy Credits
+        </button>
+
+        <div className="mt-4 pt-4 border-t border-white/20">
+          <p className="text-xs text-purple-300 text-center">
+            Period ends {new Date(usage.period_end).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default UsageWidget;

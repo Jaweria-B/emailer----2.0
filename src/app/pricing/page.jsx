@@ -110,42 +110,77 @@ export default function PricingPage() {
   };
 
   const getPlanFeatures = (plan) => {
-    return [
-      {
-        text: `${plan.simple_email_limit} Simple Emails/month`,
-        included: plan.simple_email_limit > 0,
-        highlight: true
-      },
-      // {
-      //   text: `${plan.personalized_email_limit} Personalized Emails/month`,
-      //   included: plan.personalized_email_limit > 0,
-      //   highlight: true
-      // },
-      {
-        text: plan.has_branding ? 'Includes OpenPromote Branding' : 'No Branding',
-        included: !plan.has_branding
-      },
-      {
-        text: 'AI-Powered Email Generation',
-        included: true
-      },
-      {
-        text: 'Multiple AI Providers',
-        included: true
-      },
-      {
-        text: 'Email History & Analytics',
-        included: true
-      },
-      {
-        text: 'Priority Support',
-        included: plan.name !== 'Free'
-      },
-      {
-        text: 'Advanced Templates',
-        included: plan.name !== 'Free'
-      }
-    ];
+    if (plan.name === 'Free') {
+      return [
+        {
+          text: `${plan.generation_limit} email generations per month`,
+          included: true,
+          highlight: true
+        },
+        {
+          text: `Send each to ${plan.sends_per_generation} recipients`,
+          included: true,
+          highlight: true
+        },
+        {
+          text: 'Includes OpenPromote Branding',
+          included: false
+        },
+        {
+          text: 'AI-Powered Email Generation',
+          included: true
+        },
+        {
+          text: 'Multiple AI Providers',
+          included: true
+        },
+        {
+          text: 'Email History & Analytics',
+          included: true
+        }
+      ];
+    } else if (plan.name === 'Pro') {
+      return [
+        {
+          text: 'Unlimited Email Generations',
+          included: true,
+          highlight: true
+        },
+        {
+          text: 'Unlimited Recipients',
+          included: true,
+          highlight: true
+        },
+        {
+          text: `PKR ${plan.price_per_generation} per generation`,
+          included: true,
+          highlight: true
+        },
+        {
+          text: `PKR ${plan.price_per_send} per send`,
+          included: true,
+          highlight: true
+        },
+        {
+          text: 'No Branding',
+          included: true
+        },
+        {
+          text: 'Pay As You Go',
+          included: true
+        },
+        {
+          text: 'Priority Support',
+          included: true
+        },
+        {
+          text: 'Advanced Templates',
+          included: true
+        }
+      ];
+    }
+    
+    return [];
   };
 
   const getButtonText = (plan) => {
@@ -198,7 +233,7 @@ export default function PricingPage() {
             Start for free, upgrade when you need more power
           </p>
           
-          {user && usage && (
+          {/* {user && usage && (
             <div 
               className="mt-6 rounded-xl border p-4 max-w-md mx-auto shadow-md"
               style={{ 
@@ -211,10 +246,10 @@ export default function PricingPage() {
               </p>
               <div className="text-sm space-y-1" style={{ color: 'var(--primary-active)' }}>
                 <p>Simple Emails: {usage.simple_emails_used}/{usage.simple_emails_limit}</p>
-                {/* <p>Personalized: {usage.personalized_emails_used}/{usage.personalized_emails_limit}</p> */}
+                <p>Personalized: {usage.personalized_emails_used}/{usage.personalized_emails_limit}</p>
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Pricing Cards */}
@@ -280,17 +315,28 @@ export default function PricingPage() {
                     {plan.name}
                     {isPro && <Crown className="w-6 h-6 text-yellow-300" />}
                   </h3>
-                  <div className="flex items-baseline gap-1">
+                  <div className="flex items-baseline gap-1 py-2">
                     <span 
                       className="text-5xl font-bold"
                       style={{ color: isPro ? 'white' : 'var(--foreground)' }}
                     >
-                      ${parseFloat(plan.price).toFixed(0)}
+                      Rs.{parseFloat(plan.price_per_generation).toFixed(0)}
                     </span>
                     <span style={{ color: isPro ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>
-                      /{plan.billing_cycle}
+                      /{plan.billing_cycle} per email generation
                     </span>
                   </div>
+                  {/* <div className="flex items-baseline gap-1 py-2">
+                    <span 
+                      className="text-5xl font-bold"
+                      style={{ color: isPro ? 'white' : 'var(--foreground)' }}
+                    >
+                      Rs.{parseFloat(plan.price_per_generation).toFixed(0)}
+                    </span>
+                    <span style={{ color: isPro ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>
+                      /{plan.billing_cycle} per email sending
+                    </span>
+                  </div> */}
                 </div>
 
                 {/* Features List */}

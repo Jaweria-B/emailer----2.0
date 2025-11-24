@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { sessionDb, emailUsageDb } from '@/lib/database';
 
-export async function GET(request) {  // ✅ YOU NEED THIS FUNCTION WRAPPER!
+export async function GET(request) {  
   try {
     // Get session token from cookies
     const sessionToken = request.cookies.get('session_token')?.value;

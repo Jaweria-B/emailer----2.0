@@ -38,7 +38,8 @@ export async function POST(request) {
             error: limitCheck.reason || 'Email generation limit reached',
             limit: limitCheck.limit,
             remaining: 0,
-            upgrade_required: true
+            upgrade_required: true,
+            needs_package: limitCheck.needs_package || false 
           },
           { status: 403 }
         );

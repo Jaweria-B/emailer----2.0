@@ -748,12 +748,11 @@ export const userSubscriptionsDb = {
       SELECT 
         us.*,
         sp.name as plan_name,
-        sp.generation_limit,           
-        sp.sends_per_generation,       
-        sp.price_per_generation,       
-        sp.price_per_send,             
+        sp.generation_limit,
+        sp.sends_per_email,
+        sp.max_daily_sends,
         sp.has_branding,
-        sp.currency                    
+        sp.currency
       FROM user_subscriptions us
       JOIN subscription_plans sp ON us.plan_id = sp.id
       WHERE us.user_id = ${userId} AND us.status = 'active'
@@ -780,7 +779,68 @@ export const userSubscriptionsDb = {
       RETURNING *
     `;
     return result[0] || null;
-  }
+  },
+
+  purchasePackage: async (userId, packageId) => {
+    const pkg = await packagesDb.getById(packageId);
+    
+    if (!pkg) {
+      throw new Error('Package not found');
+    }
+
+    // Get user's current subscription
+    const subscription = await userSubscriptionsDb.getCurrent(userId);
+    
+    if (!subscription || subscription.plan_name !== 'Pro') {
+      throw new Error('User must be on Pro plan to purchase packages');
+    }
+
+    // Update subscription with new package
+    const result = await sql`
+      UPDATE user_subscriptions
+      SET 
+        package_id = ${packageId},
+        package_generations_remaining = ${pkg.credits},
+        package_sends_per_email = ${pkg.sends_per_email},
+        package_purchased_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+      RETURNING *
+    `;
+
+    // Reset usage counters for new package
+    await sql`
+      UPDATE email_usage
+      SET 
+        generations_count = 0,
+        sends_count = 0,
+        daily_sends_count = 0,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+        AND period_start <= NOW()
+        AND period_end >= NOW()
+    `;
+
+    return result[0];
+  },
+
+  // Get package details for a user
+  getPackageDetails: async (userId) => {
+    const result = await sql`
+      SELECT 
+        us.package_id,
+        us.package_generations_remaining,
+        us.package_sends_per_email,
+        us.package_purchased_at,
+        p.name as package_name,
+        p.credits as package_total_credits,
+        p.price as package_price
+      FROM user_subscriptions us
+      LEFT JOIN packages p ON us.package_id = p.id
+      WHERE us.user_id = ${userId} AND us.status = 'active'
+    `;
+    return result[0] || null;
+  },
 };
 
 // -----------------------
@@ -815,6 +875,9 @@ export const emailUsageDb = {
       throw new Error('No active usage record found');
     }
 
+    const subscription = await userSubscriptionsDb.getCurrent(userId);
+    
+    // Update generations count
     const result = await sql`
       UPDATE email_usage
       SET generations_count = generations_count + 1, 
@@ -822,6 +885,17 @@ export const emailUsageDb = {
       WHERE id = ${usage.id}
       RETURNING *
     `;
+
+    // If Pro plan, decrement package generations
+    if (subscription.plan_name === 'Pro' && subscription.package_id) {
+      await sql`
+        UPDATE user_subscriptions
+        SET package_generations_remaining = GREATEST(package_generations_remaining - 1, 0),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ${userId}
+      `;
+    }
+
     return result[0];
   },
 
@@ -831,13 +905,26 @@ export const emailUsageDb = {
       throw new Error('No active usage record found');
     }
 
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const lastSendDate = usage.last_send_date;
+    
+    // Reset daily counter if it's a new day
+    let dailySendsCount = usage.daily_sends_count || 0;
+    if (!lastSendDate || lastSendDate !== today) {
+      dailySendsCount = 0;
+    }
+
     const result = await sql`
       UPDATE email_usage
-      SET sends_count = sends_count + ${sendCount}, 
-          updated_at = CURRENT_TIMESTAMP
+      SET 
+        sends_count = sends_count + ${sendCount},
+        daily_sends_count = ${dailySendsCount + sendCount},
+        last_send_date = CURRENT_DATE,
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ${usage.id}
       RETURNING *
     `;
+    
     return result[0];
   },
 
@@ -854,8 +941,6 @@ export const emailUsageDb = {
       const generationsUsed = usage ? usage.generations_count : 0;
       const sendsUsed = usage ? usage.sends_count : 0;
       
-      const maxSends = generationsUsed * subscription.sends_per_generation;
-      
       return {
         plan_type: 'free',
         plan_name: subscription.plan_name,
@@ -865,11 +950,9 @@ export const emailUsageDb = {
         generations_limit: subscription.generation_limit,
         generations_remaining: Math.max(0, subscription.generation_limit - generationsUsed),
         
-        // Send tracking
+        // Send tracking (per email)
+        sends_per_email: subscription.sends_per_email,
         sends_used: sendsUsed,
-        sends_limit: maxSends, // Dynamic based on generations
-        sends_remaining: Math.max(0, maxSends - sendsUsed),
-        sends_per_generation: subscription.sends_per_generation,
         
         period_end: subscription.current_period_end,
         has_branding: subscription.has_branding,
@@ -879,20 +962,24 @@ export const emailUsageDb = {
     
     // PRO PLAN
     else if (subscription.plan_name === 'Pro') {
-      const wallet = await walletDb.getBalance(userId);
-      const totalSpent = usage ? usage.total_spent : 0;
+      const packageDetails = await userSubscriptionsDb.getPackageDetails(userId);
+      const dailyStats = await emailUsageDb.getDailyStats(userId);
       
       return {
         plan_type: 'pro',
         plan_name: subscription.plan_name,
         
-        // Wallet tracking
-        wallet_balance: wallet.balance,
-        total_spent: totalSpent,
+        // Package tracking
+        package_id: packageDetails?.package_id || null,
+        package_name: packageDetails?.package_name || null,
+        package_generations_remaining: subscription.package_generations_remaining || 0,
+        package_sends_per_email: subscription.package_sends_per_email || 0,
+        package_purchased_at: subscription.package_purchased_at,
         
-        // Pricing
-        price_per_generation: subscription.price_per_generation,
-        price_per_send: subscription.price_per_send,
+        // Daily sending limit
+        max_daily_sends: subscription.max_daily_sends || 200,
+        daily_sends_used: dailyStats.sends_today,
+        daily_sends_remaining: Math.max(0, (subscription.max_daily_sends || 200) - dailyStats.sends_today),
         
         period_end: subscription.current_period_end,
         has_branding: subscription.has_branding,
@@ -901,7 +988,24 @@ export const emailUsageDb = {
     }
     
     return null;
-  }
+  },
+
+  getDailyStats: async (userId) => {
+    const result = await sql`
+      SELECT 
+        daily_sends_count,
+        last_send_date,
+        CASE 
+          WHEN last_send_date = CURRENT_DATE THEN daily_sends_count
+          ELSE 0
+        END as sends_today
+      FROM email_usage
+      WHERE user_id = ${userId}
+        AND period_start <= NOW()
+        AND period_end >= NOW()
+    `;
+    return result[0] || { sends_today: 0, daily_sends_count: 0 };
+  },
 };
 
 // -----------------------
@@ -930,74 +1034,88 @@ export const checkEmailLimit = async (userId, action = 'generation', sendCount =
     );
   }
 
-  // FREE PLAN LOGIC
+  // ========== FREE PLAN ==========
   if (subscription.plan_name === 'Free') {
     const generationsUsed = usage ? usage.generations_count : 0;
     const sendsUsed = usage ? usage.sends_count : 0;
     
     if (action === 'generation') {
-      // Check generation limit
       const remaining = subscription.generation_limit - generationsUsed;
       return {
         allowed: remaining > 0,
         remaining: Math.max(0, remaining),
         limit: subscription.generation_limit,
         has_branding: subscription.has_branding,
-        reason: remaining <= 0 ? 'Generation limit reached. Upgrade to Pro for unlimited.' : null
+        reason: remaining <= 0 ? 'Generation limit reached. Upgrade to Pro for more!' : null
       };
     }
     
     else if (action === 'send') {
-      // Check send limit (generations × sends_per_generation)
-      const maxSends = generationsUsed * subscription.sends_per_generation;
-      const remaining = maxSends - sendsUsed;
-      
-      // Also check if user wants to send more than allowed per email
-      if (sendCount > subscription.sends_per_generation) {
-        return {
-          allowed: false,
-          remaining: 0,
-          limit: subscription.sends_per_generation,
-          has_branding: subscription.has_branding,
-          reason: `Free plan allows max ${subscription.sends_per_generation} recipients per email`
-        };
-      }
+      // Free users can send each email to 100 people
+      // Check if total sends would exceed (generations × 100)
+      const maxTotalSends = generationsUsed * subscription.sends_per_email;
+      const remaining = maxTotalSends - sendsUsed;
       
       return {
         allowed: remaining >= sendCount,
         remaining: Math.max(0, remaining),
-        limit: maxSends,
+        limit: maxTotalSends,
+        sends_per_email: subscription.sends_per_email,
         has_branding: subscription.has_branding,
-        reason: remaining < sendCount ? 'Send limit reached for generated emails' : null
+        reason: remaining < sendCount ? `You can send to ${remaining} more recipients` : null
       };
     }
   }
   
-  // PRO PLAN LOGIC
+  // ========== PRO PLAN ==========
   else if (subscription.plan_name === 'Pro') {
-    const wallet = await walletDb.getBalance(userId);
     
     if (action === 'generation') {
-      const required = subscription.price_per_generation;
+      // Check if user has an active package
+      if (!subscription.package_id || !subscription.package_generations_remaining || subscription.package_generations_remaining <= 0) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: 0,
+          has_branding: subscription.has_branding,
+          reason: 'No active package. Please purchase a package to continue.',
+          needs_package: true
+        };
+      }
+      
       return {
-        allowed: wallet.balance >= required,
-        remaining: wallet.balance,
-        limit: 0, // No limit for Pro
+        allowed: true,
+        remaining: subscription.package_generations_remaining,
+        limit: 0, // No fixed limit, depends on package
         has_branding: subscription.has_branding,
-        cost: required,
-        reason: wallet.balance < required ? `Insufficient balance. Need PKR ${required}` : null
+        package_sends_per_email: subscription.package_sends_per_email
       };
     }
     
     else if (action === 'send') {
-      const required = subscription.price_per_send * sendCount;
+      // Check daily sending limit (200 max for Pro)
+      const dailyStats = await emailUsageDb.getDailyStats(userId);
+      const maxDailySends = subscription.max_daily_sends || 200;
+      const dailySendsUsed = dailyStats.sends_today;
+      const dailyRemaining = maxDailySends - dailySendsUsed;
+      
+      if (dailyRemaining < sendCount) {
+        return {
+          allowed: false,
+          remaining: Math.max(0, dailyRemaining),
+          limit: maxDailySends,
+          has_branding: subscription.has_branding,
+          reason: dailyRemaining > 0 
+            ? `Daily limit: You can only send to ${dailyRemaining} more recipients today`
+            : 'Daily sending limit of 200 reached. Try again tomorrow.'
+        };
+      }
+      
       return {
-        allowed: wallet.balance >= required,
-        remaining: wallet.balance,
-        limit: 0,
-        has_branding: subscription.has_branding,
-        cost: required,
-        reason: wallet.balance < required ? `Insufficient balance. Need PKR ${required}` : null
+        allowed: true,
+        remaining: dailyRemaining,
+        limit: maxDailySends,
+        has_branding: subscription.has_branding
       };
     }
   }
@@ -1040,133 +1158,31 @@ export const createDefaultSubscription = async (userId) => {
 };
 
 // -----------------------
-// Wallet operations
+// Packages operations 
 // -----------------------
-export const walletDb = {
-  getBalance: async (userId) => {
-    const result = await sql`
-      SELECT balance, currency FROM user_wallet WHERE user_id = ${userId}
-    `;
-    return result[0] || { balance: 0, currency: 'PKR' };
-  },
-
-  addCredits: async (userId, amount, description = 'Credit added') => {
-    const wallet = await sql`
-      SELECT balance FROM user_wallet WHERE user_id = ${userId}
-    `;
-    
-    const result = await sql`
-      UPDATE user_wallet
-      SET balance = balance + ${amount}, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ${userId}
-      RETURNING *
-    `;
-
-    // Log transaction
-    await sql`
-      INSERT INTO transactions 
-      (user_id, action_type, amount, wallet_balance_before, wallet_balance_after, notes)
-      VALUES (
-        ${userId}, 
-        'credit_add', 
-        ${amount}, 
-        ${wallet[0]?.balance || 0}, 
-        ${result[0].balance},
-        ${description}
-      )
-    `;
-
-    return result[0];
-  },
-
-  deduct: async (userId, amount, actionType, notes = null) => {
-    const wallet = await sql`
-      SELECT balance FROM user_wallet WHERE user_id = ${userId} FOR UPDATE
-    `;
-
-    if (!wallet[0] || wallet[0].balance < amount) {
-      throw new Error('Insufficient balance');
-    }
-
-    const result = await sql`
-      UPDATE user_wallet
-      SET balance = balance - ${amount}, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ${userId}
-      RETURNING *
-    `;
-
-    // Log transaction
-    await sql`
-      INSERT INTO transactions 
-      (user_id, action_type, amount, wallet_balance_before, wallet_balance_after, notes)
-      VALUES (
-        ${userId}, 
-        ${actionType}, 
-        ${-amount}, 
-        ${wallet[0].balance}, 
-        ${result[0].balance},
-        ${notes}
-      )
-    `;
-
-    return result[0];
-  },
-
-  create: async (userId, initialBalance = 0) => {
-    const result = await sql`
-      INSERT INTO user_wallet (user_id, balance, currency)
-      VALUES (${userId}, ${initialBalance}, 'PKR')
-      ON CONFLICT (user_id) DO NOTHING
-      RETURNING *
-    `;
-    return result[0];
-  }
-};
-
-// -----------------------
-// Credit Bundles
-// -----------------------
-export const creditBundlesDb = {
+export const packagesDb = {
   getAll: async () => {
     const result = await sql`
-      SELECT * FROM credit_bundles WHERE is_active = TRUE ORDER BY price ASC
+      SELECT * FROM packages 
+      WHERE is_active = TRUE 
+      ORDER BY price ASC
     `;
     return result;
   },
 
-  getById: async (bundleId) => {
+  getById: async (packageId) => {
     const result = await sql`
-      SELECT * FROM credit_bundles WHERE id = ${bundleId}
+      SELECT * FROM packages 
+      WHERE id = ${packageId}
     `;
     return result[0] || null;
-  }
-};
-
-// -----------------------
-// Transactions
-// -----------------------
-export const transactionsDb = {
-  getByUser: async (userId, limit = 50) => {
-    const result = await sql`
-      SELECT * FROM transactions
-      WHERE user_id = ${userId}
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    `;
-    return result;
   },
 
-  getSummary: async (userId, startDate, endDate) => {
+  getByName: async (packageName) => {
     const result = await sql`
-      SELECT 
-        action_type,
-        COUNT(*) as count,
-        SUM(ABS(amount)) as total_amount
-      FROM transactions
-      WHERE user_id = ${userId}
-        AND created_at BETWEEN ${startDate} AND ${endDate}
-      GROUP BY action_type
+      SELECT * FROM packages 
+      WHERE name = ${packageName} AND is_active = TRUE
     `;
-    return result;
+    return result[0] || null;
   }
 };

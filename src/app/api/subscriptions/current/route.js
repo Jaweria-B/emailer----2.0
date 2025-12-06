@@ -1,12 +1,5 @@
-// ===========================================
-// FILE 1: app/api/subscriptions/current/route.js
-// ===========================================
-import { NextResponse } from 'next/server';
-import { sessionDb, userSubscriptionsDb, emailUsageDb } from '@/lib/database';
-
 export async function GET(request) {
   try {
-    // Get session token from cookies
     const sessionToken = request.cookies.get('session_token')?.value;
     
     if (!sessionToken) {
@@ -16,7 +9,6 @@ export async function GET(request) {
       );
     }
 
-    // Verify session and get user
     const user = await sessionDb.findValid(sessionToken);
     
     if (!user) {
@@ -39,20 +31,55 @@ export async function GET(request) {
     // Get usage stats
     const stats = await emailUsageDb.getStats(user.id);
 
-    return NextResponse.json({
-      success: true,
-      subscription: {
-        id: subscription.id,
-        plan_name: subscription.plan_name,
-        price: subscription.price,
-        billing_cycle: subscription.billing_cycle,
-        status: subscription.status,
-        current_period_start: subscription.current_period_start,
-        current_period_end: subscription.current_period_end,
-        has_branding: subscription.has_branding
-      },
-      usage: stats
-    });
+    // FOR FREE PLAN
+    if (subscription.plan_name === 'Free') {
+      return NextResponse.json({
+        success: true,
+        subscription: {
+          id: subscription.id,
+          plan_name: subscription.plan_name,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          has_branding: subscription.has_branding,
+          generation_limit: subscription.generation_limit,
+          sends_per_email: subscription.sends_per_email
+        },
+        usage: stats
+      });
+    }
+
+    // FOR PRO PLAN
+    if (subscription.plan_name === 'Pro') {
+      const packageDetails = await userSubscriptionsDb.getPackageDetails(user.id);
+      
+      return NextResponse.json({
+        success: true,
+        subscription: {
+          id: subscription.id,
+          plan_name: subscription.plan_name,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          has_branding: subscription.has_branding,
+          max_daily_sends: subscription.max_daily_sends
+        },
+        package: packageDetails ? {
+          package_id: packageDetails.package_id,
+          package_name: packageDetails.package_name,
+          generations_remaining: subscription.package_generations_remaining,
+          sends_per_email: subscription.package_sends_per_email,
+          purchased_at: subscription.package_purchased_at
+        } : null,
+        usage: stats
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid plan configuration' },
+      { status: 500 }
+    );
+    
   } catch (error) {
     console.error('Error fetching current subscription:', error);
     return NextResponse.json(

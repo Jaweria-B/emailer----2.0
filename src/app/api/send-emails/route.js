@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { NextResponse } from 'next/server';
+import { sessionDb, userSubscriptionsDb, checkEmailLimit } from '@/lib/database';
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -67,7 +68,7 @@ export async function POST(request) {
   let transporter = null;
   
   try {
-    const { emails, subject, body, smtpConfig, attachments  } = await request.json();
+  const { emails, subject, body, smtpConfig, attachments } = await request.json();
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
       return NextResponse.json({ message: 'No email addresses provided' }, { status: 400 });
@@ -79,6 +80,31 @@ export async function POST(request) {
 
     if (!smtpConfig || !smtpConfig.auth || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
       return NextResponse.json({ message: 'SMTP configuration is required' }, { status: 400 });
+    }
+    const sessionToken = request.cookies.get('session_token')?.value;
+
+    if (sessionToken) {
+      const user = await sessionDb.findValid(sessionToken);
+      if (user) {
+        const subscription = await userSubscriptionsDb.getCurrent(user.id);
+        
+        // Check daily sending limit for Pro users
+        if (subscription && subscription.plan_name === 'Pro') {
+          const sendCount = emails.length;
+          const limitCheck = await checkEmailLimit(user.id, 'send', sendCount);
+          
+          if (!limitCheck.allowed) {
+            return NextResponse.json(
+              { 
+                error: limitCheck.reason || 'Daily sending limit reached',
+                remaining: limitCheck.remaining,
+                limit: limitCheck.limit
+              },
+              { status: 403 }
+            );
+          }
+        }
+      }
     }
 
     // Create initial transporter

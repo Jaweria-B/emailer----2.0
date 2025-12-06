@@ -1,6 +1,9 @@
 // app/api/subscriptions/upgrade/route.js
 import { NextResponse } from 'next/server';
 import { sessionDb, userSubscriptionsDb, emailUsageDb, subscriptionPlansDb } from '@/lib/database';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL);
 
 export async function POST(request) {
   try {
@@ -55,14 +58,27 @@ export async function POST(request) {
       );
     }
 
-    console.log(`🔄 User ${user.id} (${user.email}) changing plan:`);
-    console.log(`   From: ${currentSubscription?.plan_name || 'None'}`);
-    console.log(`   To: ${targetPlan.name}`);
-
     // 7. Create/Update subscription with new plan
     // This will reset the billing period to today + 30 days
     // The ON CONFLICT in userSubscriptionsDb.create handles updates
     const newSubscription = await userSubscriptionsDb.create(user.id, plan_id);
+
+    if (targetPlan.name === 'Free') {
+      // Clear package data when downgrading to Free
+      await sql`
+        UPDATE user_subscriptions
+        SET 
+          package_id = NULL,
+          package_generations_remaining = 0,
+          package_sends_per_email = 0,
+          package_purchased_at = NULL
+        WHERE user_id = ${user.id}
+      `;
+    }
+
+    console.log(`🔄 User ${user.id} (${user.email}) changing plan:`);
+    console.log(`   From: ${currentSubscription?.plan_name || 'None'}`);
+    console.log(`   To: ${targetPlan.name}`);
 
     // 8. Create fresh usage record for the new billing period
     // This resets email counters to 0

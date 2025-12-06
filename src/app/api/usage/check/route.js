@@ -1,6 +1,3 @@
-import { NextResponse } from 'next/server';
-import { sessionDb, checkEmailLimit } from '@/lib/database';
-
 export async function POST(request) {
   try {
     const sessionToken = request.cookies.get('session_token')?.value;
@@ -38,8 +35,10 @@ export async function POST(request) {
       remaining: limitCheck.remaining,
       limit: limitCheck.limit,
       has_branding: limitCheck.has_branding,
-      cost: limitCheck.cost,
-      reason: limitCheck.reason
+      reason: limitCheck.reason,
+      needs_package: limitCheck.needs_package || false, // NEW: indicates Pro user needs package
+      sends_per_email: limitCheck.sends_per_email, // NEW: for Free plan
+      package_sends_per_email: limitCheck.package_sends_per_email // NEW: for Pro plan
     });
   } catch (error) {
     console.error('Error checking usage limit:', error);

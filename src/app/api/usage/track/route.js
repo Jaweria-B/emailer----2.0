@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sessionDb, emailUsageDb, userSubscriptionsDb, walletDb } from '@/lib/database';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL);
+import { sessionDb, emailUsageDb, userSubscriptionsDb } from '@/lib/database';
 
 export async function POST(request) {
   try {
@@ -24,12 +21,7 @@ export async function POST(request) {
       );
     }
 
-    const { 
-      action, 
-      sendCount = 1,
-      email_subject = null,
-      cost = null 
-    } = await request.json();
+    const { action, sendCount = 1 } = await request.json();
     
     if (!action || !['generation', 'send'].includes(action)) {
       return NextResponse.json(
@@ -47,80 +39,53 @@ export async function POST(request) {
       );
     }
 
-    let updatedUsage;
-
-    // FREE PLAN
-    if (subscription.plan_name === 'Free') {
-      if (action === 'generation') {
-        updatedUsage = await emailUsageDb.incrementGeneration(user.id);
-      } else if (action === 'send') {
-        updatedUsage = await emailUsageDb.incrementSends(user.id, sendCount);
-      }
-
+    if (action === 'generation') {
+      // Track generation
+      await emailUsageDb.incrementGeneration(user.id);
+      
+      const updatedStats = await emailUsageDb.getStats(user.id);
+      
       return NextResponse.json({
         success: true,
-        message: 'Usage tracked successfully',
-        plan_type: 'free',
-        usage: {
-          generations_used: updatedUsage.generations_count,
-          sends_used: updatedUsage.sends_count
+        message: 'Generation tracked successfully',
+        plan_type: updatedStats.plan_type,
+        usage: subscription.plan_name === 'Free' ? {
+          generations_used: updatedStats.generations_used,
+          generations_remaining: updatedStats.generations_remaining
+        } : {
+          package_generations_remaining: updatedStats.package_generations_remaining
         }
       });
-    }
+    } 
     
-    // PRO PLAN
-    else if (subscription.plan_name === 'Pro') {
-      if (!cost || cost <= 0) {
-        return NextResponse.json(
-          { error: 'cost is required for Pro plan tracking' },
-          { status: 400 }
-        );
-      }
-
-      await walletDb.deduct(
-        user.id,
-        cost,
-        action,
-        email_subject ? `${action}: ${email_subject}` : action
-      );
-
-      await sql`
-        UPDATE email_usage
-        SET total_spent = total_spent + ${cost},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ${user.id} 
-          AND period_start <= NOW() 
-          AND period_end >= NOW()
-      `;
-
-      const wallet = await walletDb.getBalance(user.id);
-
+    else if (action === 'send') {
+      // Track sends
+      await emailUsageDb.incrementSends(user.id, sendCount);
+      
+      const updatedStats = await emailUsageDb.getStats(user.id);
+      
       return NextResponse.json({
         success: true,
-        message: 'Usage tracked and wallet updated',
-        plan_type: 'pro',
-        cost_deducted: cost,
-        wallet_balance: wallet.balance
+        message: 'Sends tracked successfully',
+        plan_type: updatedStats.plan_type,
+        usage: subscription.plan_name === 'Free' ? {
+          sends_used: updatedStats.sends_used
+        } : {
+          daily_sends_used: updatedStats.daily_sends_used,
+          daily_sends_remaining: updatedStats.daily_sends_remaining
+        }
       });
     }
 
     return NextResponse.json(
-      { error: 'Invalid plan configuration' },
-      { status: 500 }
+      { error: 'Invalid action' },
+      { status: 400 }
     );
 
   } catch (error) {
     console.error('Error tracking usage:', error);
-    
-    if (error.message === 'Insufficient balance') {
-      return NextResponse.json(
-        { error: 'Insufficient wallet balance' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(
-      { error: 'Failed to track usage' },
+      { error: error.message || 'Failed to track usage' },
       { status: 500 }
     );
   }

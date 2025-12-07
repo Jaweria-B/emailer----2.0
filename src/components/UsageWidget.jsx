@@ -1,102 +1,129 @@
 "use client"
 import React from 'react';
-import { TrendingUp, Crown, AlertCircle, Wallet } from 'lucide-react';
+import { TrendingUp, Crown, AlertCircle, Package as PackageIcon, Mail, Zap, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import Button from './button';
 
 const UsageWidget = ({ usage, subscription, onUpgradeClick }) => {
+  const router = useRouter();
+
   if (!usage || !subscription) return null;
 
-  const isFree = usage.plan_type === 'free';
-  const isPro = usage.plan_type === 'pro';
+  const isFree = subscription.plan_name === 'Free';
+  const isPro = subscription.plan_name === 'Pro';
 
-  // FREE PLAN UI
+  // ========== FREE PLAN UI ==========
   if (isFree) {
-    const generationPercentage = (usage.generations_used / usage.generations_limit) * 100;
-    const sendPercentage = usage.sends_limit > 0 
-      ? (usage.sends_used / usage.sends_limit) * 100 
+    const generationPercentage = usage.generations_limit > 0 
+      ? (usage.generations_used / usage.generations_limit) * 100 
       : 0;
 
+    const generationsRemaining = Math.max(0, usage.generations_limit - usage.generations_used);
+    const isLowOnGenerations = generationsRemaining <= 1;
+
     return (
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 shadow-xl">
+      <div 
+        className="rounded-2xl border p-6 shadow-xl"
+        style={{ 
+          backgroundColor: 'var(--background)',
+          borderColor: 'var(--border-light)'
+        }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-purple-300" />
-            <h3 className="text-lg font-semibold text-white">Your Usage</h3>
+            <TrendingUp className="h-5 w-5" style={{ color: 'var(--primary-color)' }} />
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+              Your Usage
+            </h3>
           </div>
-          <span className="text-xs bg-white/20 px-2 py-1 rounded-full text-white">
+          <span 
+            className="text-xs font-bold px-2 py-1 rounded-full"
+            style={{ 
+              backgroundColor: 'var(--background-secondary)',
+              color: 'var(--text-secondary)'
+            }}
+          >
             FREE
           </span>
         </div>
 
-        {/* Generations */}
+        {/* Generations Progress */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-purple-200">Email Generations</span>
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Email Generations
+            </span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
               {usage.generations_used} / {usage.generations_limit}
             </span>
           </div>
-          <div className="w-full bg-white/20 rounded-full h-2.5">
+          <div 
+            className="w-full rounded-full h-2.5 overflow-hidden"
+            style={{ backgroundColor: 'var(--background-secondary)' }}
+          >
             <div 
-              className={`h-full rounded-full transition-all duration-500 ${
-                generationPercentage >= 80 
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+              className="h-full rounded-full transition-all duration-500"
+              style={{ 
+                width: `${Math.min(generationPercentage, 100)}%`,
+                backgroundColor: generationPercentage >= 80 
+                  ? 'var(--error)' 
                   : generationPercentage >= 60
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                  : 'bg-gradient-to-r from-green-500 to-blue-500'
-              }`}
-              style={{ width: `${Math.min(generationPercentage, 100)}%` }}
+                  ? 'var(--warning)'
+                  : 'var(--success)'
+              }}
             />
           </div>
-          <p className="text-xs text-purple-300 mt-1">
-            {usage.generations_remaining} generations remaining
+          <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+            {generationsRemaining} generations remaining
           </p>
         </div>
 
-        {/* Sends */}
+        {/* Sends Info */}
         <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-purple-200">Email Sends</span>
-            <span className="text-sm font-semibold text-white">
-              {usage.sends_used} / {usage.sends_limit}
+          <div className="flex items-center gap-2 text-sm mb-2">
+            <Mail className="h-4 w-4" style={{ color: 'var(--primary-color)' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>
+              Send each email to <strong style={{ color: 'var(--foreground)' }}>{usage.sends_per_generation}</strong> recipients
             </span>
           </div>
-          <div className="w-full bg-white/20 rounded-full h-2.5">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${
-                sendPercentage >= 80 
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500' 
-                  : sendPercentage >= 60
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500'
-              }`}
-              style={{ width: `${Math.min(sendPercentage, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-purple-300 mt-1">
-            {usage.sends_remaining} sends remaining ({usage.sends_per_generation} per email)
-          </p>
         </div>
 
-        {/* Warning if low */}
-        {(usage.generations_remaining <= 1 || usage.sends_remaining <= 5) && (
-          <div className="mb-4 bg-orange-500/20 border border-orange-500/30 rounded-lg p-3">
-            <p className="text-xs text-orange-200 flex items-center gap-2">
+        {/* Low Warning */}
+        {isLowOnGenerations && (
+          <div 
+            className="mb-4 rounded-lg p-3 border"
+            style={{ 
+              backgroundColor: 'var(--warning-light)',
+              borderColor: 'var(--warning)'
+            }}
+          >
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--warning)' }}>
               <AlertCircle className="h-4 w-4" />
-              Running low! Upgrade to Pro for unlimited usage.
+              Running low! Upgrade to Pro for unlimited generation.
             </p>
           </div>
         )}
 
-        <button
+        {/* Upgrade Button */}
+        <Button
           onClick={onUpgradeClick}
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+          variant="primary"
+          className="w-full"
+          icon={<Crown className="h-4 w-4" />}
         >
-          <Crown className="h-4 w-4" />
           Upgrade to Pro
-        </button>
+        </Button>
 
-        <div className="mt-4 pt-4 border-t border-white/20">
-          <p className="text-xs text-purple-300 text-center">
+        {/* Period Info */}
+        <div 
+          className="mt-4 pt-4 text-center"
+          style={{ 
+            borderTopWidth: '1px',
+            borderTopStyle: 'solid',
+            borderTopColor: 'var(--border-light)'
+          }}
+        >
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             Resets on {new Date(usage.period_end).toLocaleDateString()}
           </p>
         </div>
@@ -104,79 +131,223 @@ const UsageWidget = ({ usage, subscription, onUpgradeClick }) => {
     );
   }
 
-  // PRO PLAN UI
+  // ========== PRO PLAN UI ==========
   if (isPro) {
-    const isLowBalance = usage.wallet_balance < 100;
-    
+    const hasPackage = usage.package_generations_remaining > 0;
+    const packagePercentage = hasPackage && usage.package_total_generations > 0
+      ? (usage.package_generations_remaining / usage.package_total_generations) * 100
+      : 0;
+
+    const dailySendsPercentage = usage.daily_sends_limit > 0
+      ? (usage.daily_sends_used / usage.daily_sends_limit) * 100
+      : 0;
+
+    const isLowOnPackage = hasPackage && usage.package_generations_remaining <= 10;
+    const isLowOnDailySends = usage.daily_sends_limit > 0 && (usage.daily_sends_limit - usage.daily_sends_used) <= 20;
+
     return (
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-yellow-500/30 p-6 shadow-xl">
+      <div 
+        className="rounded-2xl border-2 p-6 shadow-xl"
+        style={{ 
+          backgroundColor: 'var(--background)',
+          borderColor: 'var(--primary-color)'
+        }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-yellow-400" />
-            <h3 className="text-lg font-semibold text-white">Pro Plan</h3>
+            <Crown className="h-5 w-5" style={{ color: 'var(--primary-color)' }} />
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+              Pro Plan
+            </h3>
           </div>
-          <span className="text-xs bg-yellow-500/20 px-2 py-1 rounded-full text-yellow-300 border border-yellow-500/30">
+          <span 
+            className="text-xs font-bold px-2 py-1 rounded-full"
+            style={{ 
+              backgroundColor: 'var(--primary-lightest)',
+              color: 'var(--primary-color)'
+            }}
+          >
             PRO
           </span>
         </div>
 
-        {/* Wallet Balance */}
-        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-yellow-400" />
-              <span className="text-sm text-white">Wallet Balance</span>
+        {/* Package Progress */}
+        {hasPackage ? (
+          <div 
+            className="rounded-xl border p-4 mb-4"
+            style={{ 
+              backgroundColor: 'var(--primary-lightest)',
+              borderColor: 'var(--primary-lighter)'
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <PackageIcon className="h-5 w-5" style={{ color: 'var(--primary-color)' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--primary-active)' }}>
+                {usage.package_name || 'Current Package'}
+              </span>
             </div>
-            <span className="text-2xl font-bold text-yellow-400">
-              {usage.currency} {usage.wallet_balance.toFixed(2)}
+            
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium" style={{ color: 'var(--primary-active)' }}>
+                Generations Remaining
+              </span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--primary-color)' }}>
+                {usage.package_generations_remaining} / {usage.package_total_generations || 0}
+              </span>
+            </div>
+            
+            <div 
+              className="w-full rounded-full h-2.5 overflow-hidden"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
+            >
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(packagePercentage, 100)}%`,
+                  backgroundColor: packagePercentage <= 20 
+                    ? 'var(--error)' 
+                    : packagePercentage <= 50
+                    ? 'var(--warning)'
+                    : 'var(--success)'
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 text-xs mt-2" style={{ color: 'var(--primary-active)' }}>
+              <Mail className="h-3 w-3" />
+              <span>{usage.package_sends_per_email || 0} sends per email</span>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="rounded-xl border p-4 mb-4"
+            style={{ 
+              backgroundColor: 'var(--error-light)',
+              borderColor: 'var(--error)'
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5" style={{ color: 'var(--error)' }} />
+              <span className="font-semibold text-sm" style={{ color: 'var(--error)' }}>
+                No Active Package
+              </span>
+            </div>
+            <p className="text-xs mb-3" style={{ color: 'var(--error)' }}>
+              Purchase a package to start generating emails
+            </p>
+            <Button
+              onClick={() => router.push('/packages')}
+              variant="primary"
+              size="sm"
+              className="w-full"
+              icon={<PackageIcon className="h-4 w-4" />}
+            >
+              Purchase Package
+            </Button>
+          </div>
+        )}
+
+        {/* Daily Sends Limit */}
+        <div 
+          className="rounded-xl border p-4 mb-4"
+          style={{ 
+            backgroundColor: 'var(--background-secondary)',
+            borderColor: 'var(--border-light)'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="h-5 w-5" style={{ color: 'var(--primary-color)' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              Daily Sends
+            </span>
+            <span className="text-xs ml-auto" style={{ color: 'var(--text-secondary)' }}>
+              resets in {24 - new Date().getHours()}h
             </span>
           </div>
+          
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Today's Usage
+            </span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              {usage.daily_sends_used || 0} / {usage.daily_sends_limit || 200}
+            </span>
+          </div>
+          
+          <div 
+            className="w-full rounded-full h-2.5 overflow-hidden"
+            style={{ backgroundColor: 'var(--gray-200)' }}
+          >
+            <div 
+              className="h-full rounded-full transition-all duration-500"
+              style={{ 
+                width: `${Math.min(dailySendsPercentage, 100)}%`,
+                backgroundColor: dailySendsPercentage >= 90 
+                  ? 'var(--error)' 
+                  : dailySendsPercentage >= 70
+                  ? 'var(--warning)'
+                  : 'var(--primary-color)'
+              }}
+            />
+          </div>
+          
+          <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+            {Math.max(0, (usage.daily_sends_limit || 200) - (usage.daily_sends_used || 0))} sends remaining today
+          </p>
         </div>
 
-        {/* Pricing Info */}
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-purple-200">Generation Cost:</span>
-            <span className="text-white font-semibold">
-              {usage.currency} {usage.price_per_generation}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-purple-200">Send Cost (per recipient):</span>
-            <span className="text-white font-semibold">
-              {usage.currency} {usage.price_per_send}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm pt-2 border-t border-white/20">
-            <span className="text-purple-200">Total Spent This Period:</span>
-            <span className="text-white font-semibold">
-              {usage.currency} {usage.total_spent.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* Low Balance Warning */}
-        {isLowBalance && (
-          <div className="bg-orange-500/20 border border-orange-500/30 rounded-lg p-3 mb-3">
-            <p className="text-xs text-orange-200 flex items-center gap-2">
+        {/* Warnings */}
+        {isLowOnPackage && (
+          <div 
+            className="mb-3 rounded-lg p-3 border"
+            style={{ 
+              backgroundColor: 'var(--warning-light)',
+              borderColor: 'var(--warning)'
+            }}
+          >
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--warning)' }}>
               <AlertCircle className="h-4 w-4" />
-              Low balance! Add credits to continue using the service.
+              Low on generations! Consider purchasing another package.
             </p>
           </div>
         )}
 
-        {/* Buy Credits Button */}
-        <button
-          onClick={() => window.location.href = '/bundles'}
-          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
-        >
-          <Wallet className="h-4 w-4" />
-          Buy Credits
-        </button>
+        {isLowOnDailySends && (
+          <div 
+            className="mb-3 rounded-lg p-3 border"
+            style={{ 
+              backgroundColor: 'var(--warning-light)',
+              borderColor: 'var(--warning)'
+            }}
+          >
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--warning)' }}>
+              <Clock className="h-4 w-4" />
+              Approaching daily send limit! Resets in {24 - new Date().getHours()} hours.
+            </p>
+          </div>
+        )}
 
-        <div className="mt-4 pt-4 border-t border-white/20">
-          <p className="text-xs text-purple-300 text-center">
-            Period ends {new Date(usage.period_end).toLocaleDateString()}
+        {/* Buy Package Button */}
+        <Button
+          onClick={() => router.push('/packages')}
+          variant={hasPackage ? "outline" : "primary"}
+          className="w-full"
+          icon={<PackageIcon className="h-4 w-4" />}
+        >
+          {hasPackage ? 'Purchase More' : 'Purchase Package'}
+        </Button>
+
+        {/* Period Info */}
+        <div 
+          className="mt-4 pt-4 text-center"
+          style={{ 
+            borderTopWidth: '1px',
+            borderTopStyle: 'solid',
+            borderTopColor: 'var(--border-light)'
+          }}
+        >
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Pro subscription renews on {new Date(usage.period_end).toLocaleDateString()}
           </p>
         </div>
       </div>

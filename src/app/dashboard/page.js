@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Mail, User, Calendar, Activity, LogOut, MessageSquare, 
-  TrendingUp, Zap, AlertTriangle, Crown, ArrowRight, CheckCircle2, Wallet 
+  TrendingUp, AlertTriangle, Crown, ArrowRight, CheckCircle2, 
+  Wallet, Package, Send, Clock
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/providers/AuthProvider';
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [emailHistory, setEmailHistory] = useState([]);
   const [subscriptionData, setSubscriptionData] = useState(null);
   const [usageData, setUsageData] = useState(null);
+  const [packageData, setPackageData] = useState(null);
   const [stats, setStats] = useState({
     totalEmails: 0,
     emailsThisMonth: 0,
@@ -75,8 +77,10 @@ const Dashboard = () => {
       const response = await fetch('/api/subscriptions/current');
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Subscription Data:', data.usage);
         setSubscriptionData(data.subscription);
         setUsageData(data.usage);
+        setPackageData(data.package || null);
       }
     } catch (error) {
       console.error('Failed to load subscription data:', error);
@@ -96,6 +100,19 @@ const Dashboard = () => {
     }
   }, [user, loadEmailHistory, loadSubscriptionData]);
 
+  // Listen for visibility change - refresh when user comes back to dashboard
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        // User came back to this tab, refresh data
+        loadSubscriptionData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user, loadSubscriptionData]);
+
   const handleLogout = async () => {
     await contextLogout();
   };
@@ -110,17 +127,6 @@ const Dashboard = () => {
     });
   };
 
-  const getUsagePercentage = (used, limit) => {
-    if (limit === 0) return 0;
-    return Math.round((used / limit) * 100);
-  };
-
-  const shouldShowWarning = (remaining, limit) => {
-    if (limit === 0) return false;
-    const percentage = (remaining / limit) * 100;
-    return percentage <= 20 || remaining <= 5;
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
@@ -132,16 +138,9 @@ const Dashboard = () => {
     );
   }
 
-  // Handle both Free and Pro plans
-  const isFree = usageData?.plan_type === 'free';
-  const isPro = usageData?.plan_type === 'pro';
-
-  // Free plan percentages
-  const simplePercentage = isFree && usageData ? getUsagePercentage(usageData.generations_used, usageData.generations_limit) : 0;
-  const showSimpleWarning = isFree && usageData ? shouldShowWarning(usageData.generations_remaining, usageData.generations_limit) : false;
-
-  // Pro plan - no percentages needed
-  const isLowBalance = isPro && usageData ? usageData.wallet_balance < 100 : false;
+  const isFree = subscriptionData?.plan_name === 'Free';
+  const isPro = subscriptionData?.plan_name === 'Pro';
+  const hasPackage = isPro && packageData?.package_id;
 
   return (
     <PageWrapper>
@@ -167,12 +166,12 @@ const Dashboard = () => {
             </div>
             <div className="flex gap-2 md:gap-3">
               <Button
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/emailcurator/generate-email')}
                 variant="primary"
                 icon={<MessageSquare className="h-4 w-4 md:h-5 md:w-5" />}
                 className="text-sm md:text-base"
               >
-                <span className="">Create Email</span>
+                Create Email
               </Button>
               <Button
                 onClick={handleLogout}
@@ -180,18 +179,16 @@ const Dashboard = () => {
                 icon={<LogOut className="h-4 w-4" />}
                 className="text-sm md:text-base"
               >
-                <span className="">Sign Out</span>
+                Sign Out
               </Button>
             </div>
           </div>
 
           {/* Warning Banners */}
-
-          {/* Low Balance Warning for Pro */}
-          {isLowBalance && (
-            <div className="mb-4 sm:mb-6">
+          {isPro && !hasPackage && (
+            <div className="mb-6">
               <div 
-                className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                className="rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
                 style={{ 
                   backgroundColor: 'var(--warning-light)',
                   borderWidth: '1px',
@@ -202,124 +199,42 @@ const Dashboard = () => {
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
                 <div className="flex-1">
                   <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--warning)' }}>
-                    Low wallet balance! Add credits to continue using the service.
+                    No active package! Purchase a package to start generating emails.
                   </p>
                 </div>
-                <Button
-                  onClick={() => router.push('/bundles')}
+                <LinkButton
+                  href="/packages"
                   variant="primary"
                   size="sm"
                   className="w-full sm:w-auto"
                 >
-                  Buy Credits
-                </Button>
+                  Browse Packages
+                </LinkButton>
               </div>
             </div>
           )}
 
-          {/* {(showSimpleWarning || showPersonalizedWarning || (usageData && usageData.personalized_emails_limit === 0)) && (
-            <div className="mb-4 sm:mb-6 space-y-3">
-              {showSimpleWarning && usageData.simple_emails_remaining > 0 && (
-                <div 
-                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-                  style={{ 
-                    backgroundColor: 'var(--warning-light)',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: 'var(--warning)'
-                  }}
-                >
-                  <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--warning)' }}>
-                      Running low on simple emails! Only {usageData.simple_emails_remaining} remaining this month.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => router.push('/pricing')}
-                    variant="primary"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    Upgrade Now
-                  </Button>
-                </div>
-              )}
-              
-              {usageData && usageData.simple_emails_remaining === 0 && (
-                <div 
-                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-                  style={{ 
-                    backgroundColor: 'var(--error-light)',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: 'var(--error)'
-                  }}
-                >
-                  <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--error)' }} />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--error)' }}>
-                      You've reached your simple email limit for this month!
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => router.push('/pricing')}
-                    variant="primary"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    Upgrade Now
-                  </Button>
-                </div>
-              )}
-
-              {usageData && usageData.personalized_emails_limit === 0 && subscriptionData?.plan_name === 'Free' && (
-                <div 
-                  className="rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-                  style={{ 
-                    backgroundColor: 'var(--primary-lightest)',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: 'var(--primary-lighter)'
-                  }}
-                >
-                  <Crown className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--primary-color)' }} />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--primary-active)' }}>
-                      Upgrade to Pro to unlock 100 personalized emails per month!
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => router.push('/pricing')}
-                    variant="primary"
-                    icon={<Crown className="h-4 w-4" />}
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    Go Pro
-                  </Button>
-                </div>
-              )}
-            </div>
-          )} */}
-
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            {/* Simple Emails Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            {/* Card 1: Generations/Package Status */}
             <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--primary-lightest)' }}>
-                  <Mail className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--primary-color)' }} />
+                  {isPro ? (
+                    <Package className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--primary-color)' }} />
+                  ) : (
+                    <Mail className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--primary-color)' }} />
+                  )}
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                    {isPro ? 'Wallet Balance' : 'Email Generations'}
+                    {isPro ? 'Package Status' : 'Email Generations'}
                   </p>
                   <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
                     {isFree && usageData 
                       ? `${usageData.generations_used}/${usageData.generations_limit}` 
-                      : isPro && usageData && usageData.wallet_balance !== undefined
-                      ? `${usageData.currency || 'PKR'} ${Number(usageData.wallet_balance).toFixed(0)}`
+                      : isPro && hasPackage
+                      ? `${usageData.package_generations_remaining || 0}`
                       : '0'
                     }
                   </p>
@@ -329,36 +244,47 @@ const Dashboard = () => {
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   {isFree && usageData 
                     ? `${usageData.generations_remaining} remaining` 
-                    : isPro && usageData && usageData.total_spent !== undefined
-                    ? `Spent: ${usageData.currency || 'PKR'} ${Number(usageData.total_spent).toFixed(0)}`
-                    : 'No data'
+                    : isPro && hasPackage
+                    ? `${packageData.package_name} package`
+                    : 'No package active'
                   }
                 </p>
               </div>
             </div>
-            {/* Personalized Emails Card - Commented out but keeping structure */}
-            {/* <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
+
+            {/* Card 2: Daily Sends (Pro) or This Month (Free) */}
+            <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#fef3c7' }}>
-                  <Zap className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#f59e0b' }} />
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#d1fae5' }}>
+                  {isPro ? (
+                    <Send className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--success)' }} />
+                  ) : (
+                    <Calendar className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: 'var(--success)' }} />
+                  )}
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                    Personalized
+                    {isPro ? 'Daily Sends' : 'This Month'}
                   </p>
                   <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-                    {usageData ? `${usageData.personalized_emails_used}/${usageData.personalized_emails_limit}` : '0/0'}
+                    {isPro && usageData 
+                      ? `${usageData.daily_sends_used || 0}/${usageData.max_daily_sends || 200}`
+                      : stats.emailsThisMonth
+                    }
                   </p>
                 </div>
               </div>
               <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No data'}
+                  {isPro && usageData 
+                    ? `${usageData.daily_sends_remaining || 0} remaining today`
+                    : 'Emails this month'
+                  }
                 </p>
               </div>
-            </div> */}
+            </div>
 
-            {/* Current Plan Card */}
+            {/* Card 3: Current Plan */}
             <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-3 rounded-lg" style={{ backgroundColor: '#f3e8ff' }}>
@@ -373,167 +299,189 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
-              {subscriptionData?.plan_name === 'Free' && (
+              {isFree && (
                 <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
                   <LinkButton
                     href="/pricing"
                     variant="text"
-                    className="text-xs font-medium"
+                    className="text-xs font-medium flex items-center gap-1"
                     style={{ color: 'var(--primary-color)' }}
                   >
                     Upgrade to Pro
-                    {<ArrowRight className="h-3 w-3" />}
+                    <ArrowRight className="h-3 w-3" />
                   </LinkButton>
                 </div>
               )}
             </div>
 
-            {/* This Month Card */}
+            {/* Card 4: Total Emails */}
             <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow" style={{ borderColor: 'var(--border-light)' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: '#d1fae5' }}>
-                  <Calendar className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#10b981' }} />
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#dbeafe' }}>
+                  <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#3b82f6' }} />
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                    This Month
+                    Total Generated
                   </p>
                   <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-                    {stats.emailsThisMonth}
+                    {stats.totalEmails}
                   </p>
                 </div>
               </div>
               <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Emails generated
+                  All time
                 </p>
               </div>
             </div>
           </div>
 
           {/* Subscription Overview */}
-          <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 mb-6 sm:mb-8" style={{ borderColor: 'var(--border-light)' }}>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+          <div className="bg-white rounded-xl border shadow-lg p-4 sm:p-6 mb-8" style={{ borderColor: 'var(--border-light)' }}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
               <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--foreground)' }}>
                 <Activity className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--primary-color)' }} />
-                Subscription Overview
+                {isPro ? 'Package Overview' : 'Subscription Overview'}
               </h2>
-              <Button
-                onClick={() => router.push('/pricing')}
-                variant="primary"
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                View Plans
-                {<ArrowRight className="h-4 w-4" />}
-              </Button>
+              {isPro && hasPackage ? (
+                <LinkButton
+                  href="/packages"
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Buy More
+                </LinkButton>
+              ) : isPro && !hasPackage ? (
+                <LinkButton
+                  href="/packages"
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Purchase Package
+                </LinkButton>
+              ) : (
+                <LinkButton
+                  href="/pricing"
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  View Plans
+                </LinkButton>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 sm:gap-6">
-              {/* Simple Emails Progress */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
-                    {isPro ? 'Wallet Balance' : 'Email Generations'}
-                  </span>
-                  <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
-                    {isFree && usageData 
-                      ? `${usageData.generations_used} / ${usageData.generations_limit}` 
-                      : isPro && usageData && usageData.wallet_balance !== undefined
-                      ? `${usageData.currency || 'PKR'} ${Number(usageData.wallet_balance).toFixed(2)}`
-                      : '0 / 0'
-                    }
-                  </span>
-                </div>
-                <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
-                  <div
-                    className="h-full transition-all duration-500 rounded-full"
-                    style={{ 
-                      width: `${Math.min(simplePercentage, 100)}%`,
-                      backgroundColor: simplePercentage >= 80 ? 'var(--error)' : simplePercentage >= 50 ? 'var(--warning)' : 'var(--success)'
-                    }}
-                  />
-                </div>
-                <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                  {isFree && usageData 
-                    ? `${usageData.generations_remaining} remaining` 
-                    : isPro && usageData && usageData.total_spent !== undefined
-                    ? `Total spent: ${usageData.currency || 'PKR'} ${Number(usageData.total_spent).toFixed(2)}`
-                    : 'No data'
-                  }
-                </p>
-              </div>
-
-              {/* Personalized Emails Progress - Commented out */}
-              {/* <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
-                    Personalized Emails
-                  </span>
-                  <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
-                    {usageData ? `${usageData.personalized_emails_used} / ${usageData.personalized_emails_limit}` : '0 / 0'}
-                  </span>
-                </div>
-                <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
-                  <div
-                    className="h-full transition-all duration-500 rounded-full"
-                    style={{ 
-                      width: usageData && usageData.personalized_emails_limit === 0 ? '0%' : `${Math.min(personalizedPercentage, 100)}%`,
-                      backgroundColor: usageData && usageData.personalized_emails_limit === 0 
-                        ? 'var(--gray-400)' 
-                        : personalizedPercentage >= 80 
-                        ? 'var(--error)' 
-                        : personalizedPercentage >= 50 
-                        ? 'var(--warning)' 
-                        : 'var(--success)'
-                    }}
-                  />
-                </div>
-                {usageData && usageData.personalized_emails_limit === 0 ? (
-                  <p className="text-xs sm:text-sm mt-2 flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
-                    <Crown className="h-3 w-3" />
-                    Upgrade to Pro to unlock
-                  </p>
-                ) : (
-                  <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                    {usageData ? `${usageData.personalized_emails_remaining} remaining` : 'No limit data'}
-                  </p>
-                )}
-              </div> */}
-            </div>
-
-            {/* Plan Details */}
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* FREE PLAN DISPLAY */}
+            {isFree && usageData && (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-xs sm:text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                    Billing Period
-                  </p>
-                  <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
-                    Resets on {usageData ? new Date(usageData.period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                      Email Generations
+                    </span>
+                    <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
+                      {usageData.generations_used} / {usageData.generations_limit}
+                    </span>
+                  </div>
+                  <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
+                    <div
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${Math.min((usageData.generations_used / usageData.generations_limit) * 100, 100)}%`,
+                        backgroundColor: usageData.generations_remaining <= 1 ? 'var(--error)' : usageData.generations_remaining <= 2 ? 'var(--warning)' : 'var(--success)'
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                    {usageData.generations_remaining} generations remaining
                   </p>
                 </div>
-                {subscriptionData?.plan_name === 'Free' && (
-                  <Button
-                    onClick={() => router.push('/pricing')}
-                    variant="primary"
-                    icon={<Crown className="h-4 w-4 sm:h-5 sm:w-5" />}
-                    className="w-full sm:w-auto"
-                  >
-                    Upgrade to Pro
-                  </Button>
-                )}
-                {subscriptionData?.plan_name === 'Pro' && (
-                  <Button
-                    onClick={() => router.push('/bundles')}
-                    variant="primary"
-                    icon={<Wallet className="h-4 w-4 sm:h-5 sm:w-5" />}
-                    className="w-full sm:w-auto"
-                  >
-                    Buy Credits
-                  </Button>
-                )}
               </div>
+            )}
+
+            {/* PRO PLAN DISPLAY */}
+            {isPro && hasPackage && usageData && (
+              <div className="space-y-6">
+                {/* Package Progress */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                      Package Generations
+                    </span>
+                    <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
+                      {usageData.package_generations_remaining || 0} remaining
+                    </span>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {packageData.package_name}
+                      </span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                        {usageData.package_sends_per_email || 0} sends/email
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Sends Progress */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                      Daily Sends (resets tomorrow)
+                    </span>
+                    <span className="font-bold text-sm sm:text-base" style={{ color: 'var(--foreground)' }}>
+                      {usageData.daily_sends_used || 0} / {usageData.max_daily_sends || 200}
+                    </span>
+                  </div>
+                  <div className="rounded-full h-2 sm:h-3 overflow-hidden" style={{ backgroundColor: 'var(--gray-200)' }}>
+                    <div
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${Math.min(((usageData.daily_sends_used || 0) / (usageData.max_daily_sends || 200)) * 100, 100)}%`,
+                        backgroundColor: (usageData.daily_sends_remaining || 0) <= 20 ? 'var(--error)' : (usageData.daily_sends_remaining || 0) <= 50 ? 'var(--warning)' : 'var(--success)'
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs sm:text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                    {usageData.daily_sends_remaining || 0} sends remaining today
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* PRO WITHOUT PACKAGE */}
+            {isPro && !hasPackage && (
+              <div className="text-center py-8">
+                <Package className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
+                <p className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>
+                  No Active Package
+                </p>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  Purchase a package to start generating emails
+                </p>
+                <LinkButton
+                  href="/packages"
+                  variant="primary"
+                >
+                  Browse Packages
+                </LinkButton>
+              </div>
+            )}
+
+            {/* Period Info */}
+            <div className="mt-6 pt-4" style={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'var(--border-light)' }}>
+              <p className="text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                {isFree 
+                  ? `Billing period resets on ${new Date(subscriptionData?.current_period_end).toLocaleDateString()}`
+                  : hasPackage 
+                  ? `Package purchased on ${new Date(packageData?.purchased_at).toLocaleDateString()}`
+                  : `Pro plan active`
+                }
+              </p>
             </div>
           </div>
 
@@ -623,7 +571,7 @@ const Dashboard = () => {
                   Start creating your first email!
                 </p>
                 <Button
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push('/emailcurator/generate-email')}
                   variant="primary"
                   icon={<MessageSquare className="h-5 w-5" />}
                 >

@@ -277,7 +277,6 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
       return;
     }
 
-    // Convert files to base64
     const processedFiles = await Promise.all(
       files.map(file => {
         return new Promise((resolve, reject) => {
@@ -285,7 +284,7 @@ const EmailSender = ({ subject, body, onBack, onEmailSent }) => {
           reader.onload = () => {
             resolve({
               filename: file.name,
-              content: reader.result.split(',')[1], // Base64 part only
+              content: reader.result.split(',')[1],
               contentType: file.type || 'application/octet-stream',
               size: file.size,
               encoding: 'base64'

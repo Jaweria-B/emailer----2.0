@@ -56,6 +56,7 @@ export async function GET(request) {
     if (subscription.plan_name === 'Pro') {
       const packageDetails = await userSubscriptionsDb.getPackageDetails(user.id);
       
+      // MERGE package data into subscription object
       return NextResponse.json({
         success: true,
         subscription: {
@@ -65,14 +66,20 @@ export async function GET(request) {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           has_branding: subscription.has_branding,
-          max_daily_sends: subscription.max_daily_sends
+          max_daily_sends: subscription.max_daily_sends,
+          // ========== PACKAGE DATA MERGED IN ==========
+          package_id: packageDetails?.package_id || null,
+          package_name: packageDetails?.package_name || null,
+          package_generations_remaining: packageDetails?.package_generations_remaining || 0,
+          package_sends_per_email: packageDetails?.package_sends_per_email || 0,
+          package_purchased_at: packageDetails?.package_purchased_at || null
         },
         package: packageDetails ? {
           package_id: packageDetails.package_id,
           package_name: packageDetails.package_name,
-          generations_remaining: subscription.package_generations_remaining,
-          sends_per_email: subscription.package_sends_per_email,
-          purchased_at: subscription.package_purchased_at
+          generations_remaining: packageDetails.package_generations_remaining,
+          sends_per_email: packageDetails.package_sends_per_email,
+          purchased_at: packageDetails.package_purchased_at
         } : null,
         usage: stats
       });

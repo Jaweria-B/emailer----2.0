@@ -1,6 +1,5 @@
-// ===========================================
-// FILE 2: app/api/subscriptions/create/route.js
-// ===========================================
+// app/api/subscriptions/create/route.js
+
 import { NextResponse } from 'next/server';
 import { sessionDb, userSubscriptionsDb, subscriptionPlansDb, emailUsageDb } from '@/lib/database';
 

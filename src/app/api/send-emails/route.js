@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { NextResponse } from 'next/server';
-import { sessionDb, userSubscriptionsDb, checkEmailLimit } from '@/lib/database';
+import { sessionDb, userSubscriptionsDb, checkEmailLimit, emailUsageDb } from '@/lib/database';
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -66,9 +66,10 @@ const createTransporter = (smtpConfig) => {
 
 export async function POST(request) {
   let transporter = null;
+  let userId = null;
   
   try {
-  const { emails, subject, body, smtpConfig, attachments } = await request.json();
+    const { emails, subject, body, smtpConfig, attachments } = await request.json();
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
       return NextResponse.json({ message: 'No email addresses provided' }, { status: 400 });
@@ -81,11 +82,13 @@ export async function POST(request) {
     if (!smtpConfig || !smtpConfig.auth || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
       return NextResponse.json({ message: 'SMTP configuration is required' }, { status: 400 });
     }
+
     const sessionToken = request.cookies.get('session_token')?.value;
 
     if (sessionToken) {
       const user = await sessionDb.findValid(sessionToken);
       if (user) {
+        userId = user.id;
         const subscription = await userSubscriptionsDb.getCurrent(user.id);
         
         // Check daily sending limit for Pro users
@@ -242,6 +245,17 @@ export async function POST(request) {
     const failedEmails = results.filter(r => !r.success).length;
     
     console.log(`Email sending completed: ${successfulEmails} successful, ${failedEmails} failed out of ${emails.length} total`);
+
+    // ===== TRACK SUCCESSFUL SENDS =====
+    if (userId && successfulEmails > 0) {
+      try {
+        await emailUsageDb.incrementSends(userId, successfulEmails);
+        console.log(`Tracked ${successfulEmails} sends for user ${userId}`);
+      } catch (trackError) {
+        console.error('Error tracking email sends:', trackError.message);
+        // Don't fail the entire request if tracking fails, just log it
+      }
+    }
 
     return NextResponse.json({
       results: results,

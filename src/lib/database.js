@@ -788,38 +788,43 @@ export const userSubscriptionsDb = {
       throw new Error('Package not found');
     }
 
-    // Get user's current subscription
     const subscription = await userSubscriptionsDb.getCurrent(userId);
     
     if (!subscription || subscription.plan_name !== 'Pro') {
       throw new Error('User must be on Pro plan to purchase packages');
     }
 
+    const creditsInt = parseInt(pkg.credits, 10);
+    const sendsPerEmailInt = parseInt(pkg.sends_per_email, 10);
+
     // Update subscription with new package
     const result = await sql`
       UPDATE user_subscriptions
       SET 
         package_id = ${packageId},
-        package_generations_remaining = ${pkg.credits},
-        package_sends_per_email = ${pkg.sends_per_email},
+        package_generations_remaining = ${creditsInt},
+        package_sends_per_email = ${sendsPerEmailInt},
         package_purchased_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ${userId}
       RETURNING *
     `;
 
-    // Reset usage counters for new package
+    // Reset usage counters AND reset last_send_date to NULL
     await sql`
       UPDATE email_usage
       SET 
         generations_count = 0,
         sends_count = 0,
         daily_sends_count = 0,
+        last_send_date = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ${userId}
         AND period_start <= NOW()
         AND period_end >= NOW()
     `;
+
+    console.log(`✅ Package ${packageId} purchased by user ${userId}. Usage reset.`);
 
     return result[0];
   },
@@ -862,8 +867,8 @@ export const emailUsageDb = {
   create: async (userId, subscriptionId, periodStart, periodEnd) => {
     const result = await sql`
       INSERT INTO email_usage 
-      (user_id, subscription_id, generations_count, sends_count, total_spent, period_start, period_end)
-      VALUES (${userId}, ${subscriptionId}, 0, 0, 0.00, ${periodStart.toISOString()}, ${periodEnd.toISOString()})
+      (user_id, subscription_id, generations_count, sends_count, daily_sends_count, period_start, period_end)
+      VALUES (${userId}, ${subscriptionId}, 0, 0, 0, ${periodStart.toISOString()}, ${periodEnd.toISOString()})
       RETURNING *
     `;
     return result[0];
@@ -905,25 +910,49 @@ export const emailUsageDb = {
       throw new Error('No active usage record found');
     }
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const lastSendDate = usage.last_send_date;
+    console.log(`\n📧 [incrementSends] Starting for user ${userId}, sendCount=${sendCount}`);
+    console.log(`   Current state: daily_sends=${usage.daily_sends_count}, last_send_date=${usage.last_send_date}`);
+
+    // Get today's date (date only, no time)
+    const today = new Date();
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     
-    // Reset daily counter if it's a new day
+    // Check if last_send_date is from today
     let dailySendsCount = usage.daily_sends_count || 0;
-    if (!lastSendDate || lastSendDate !== today) {
+    
+    if (usage.last_send_date) {
+      const lastSendDate = new Date(usage.last_send_date);
+      const lastSendDateOnly = new Date(lastSendDate.getFullYear(), lastSendDate.getMonth(), lastSendDate.getDate());
+      
+      if (lastSendDateOnly.getTime() !== todayDateOnly.getTime()) {
+        console.log(`   🔄 Different day detected. Resetting counter.`);
+        dailySendsCount = 0;
+      } else {
+        console.log(`   ✅ Same day. Keeping counter.`);
+      }
+    } else {
+      console.log(`   📅 No previous send date. Starting fresh.`);
       dailySendsCount = 0;
     }
+
+    const newCount = dailySendsCount + sendCount;
+    console.log(`   📈 New daily_sends_count will be: ${dailySendsCount} + ${sendCount} = ${newCount}`);
 
     const result = await sql`
       UPDATE email_usage
       SET 
         sends_count = sends_count + ${sendCount},
-        daily_sends_count = ${dailySendsCount + sendCount},
+        daily_sends_count = ${newCount},
         last_send_date = CURRENT_DATE,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${usage.id}
       RETURNING *
     `;
+    
+    console.log(`   ✅ Database updated. Result:`, {
+      daily_sends_count: result[0]?.daily_sends_count,
+      last_send_date: result[0]?.last_send_date
+    });
     
     return result[0];
   },
@@ -944,16 +973,11 @@ export const emailUsageDb = {
       return {
         plan_type: 'free',
         plan_name: subscription.plan_name,
-        
-        // Generation tracking
         generations_used: generationsUsed,
         generations_limit: subscription.generation_limit,
         generations_remaining: Math.max(0, subscription.generation_limit - generationsUsed),
-        
-        // Send tracking (per email)
         sends_per_email: subscription.sends_per_email,
         sends_used: sendsUsed,
-        
         period_end: subscription.current_period_end,
         has_branding: subscription.has_branding,
         currency: subscription.currency
@@ -965,22 +989,21 @@ export const emailUsageDb = {
       const packageDetails = await userSubscriptionsDb.getPackageDetails(userId);
       const dailyStats = await emailUsageDb.getDailyStats(userId);
       
+      console.log(`\n📊 [getStats] Pro plan for user ${userId}`);
+      console.log(`   packageDetails:`, packageDetails);
+      console.log(`   dailyStats:`, dailyStats);
+      
       return {
         plan_type: 'pro',
         plan_name: subscription.plan_name,
-        
-        // Package tracking
         package_id: packageDetails?.package_id || null,
         package_name: packageDetails?.package_name || null,
         package_generations_remaining: subscription.package_generations_remaining || 0,
         package_sends_per_email: subscription.package_sends_per_email || 0,
         package_purchased_at: subscription.package_purchased_at,
-        
-        // Daily sending limit
         max_daily_sends: subscription.max_daily_sends || 200,
-        daily_sends_used: dailyStats.sends_today,
-        daily_sends_remaining: Math.max(0, (subscription.max_daily_sends || 200) - dailyStats.sends_today),
-        
+        daily_sends_used: dailyStats?.sends_today || 0,
+        daily_sends_remaining: Math.max(0, (subscription.max_daily_sends || 200) - (dailyStats?.sends_today || 0)),
         period_end: subscription.current_period_end,
         has_branding: subscription.has_branding,
         currency: subscription.currency
@@ -996,15 +1019,19 @@ export const emailUsageDb = {
         daily_sends_count,
         last_send_date,
         CASE 
-          WHEN last_send_date = CURRENT_DATE THEN daily_sends_count
+          WHEN last_send_date::DATE = CURRENT_DATE THEN daily_sends_count
           ELSE 0
         END as sends_today
       FROM email_usage
       WHERE user_id = ${userId}
         AND period_start <= NOW()
         AND period_end >= NOW()
+      LIMIT 1
     `;
-    return result[0] || { sends_today: 0, daily_sends_count: 0 };
+    
+    console.log(`\n📅 [getDailyStats] Result for user ${userId}:`, result[0]);
+    
+    return result[0] || { sends_today: 0, daily_sends_count: 0, last_send_date: null };
   },
 };
 

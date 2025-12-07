@@ -8,7 +8,6 @@ import {
   anonymousDevicesDb, 
   checkEmailLimit, 
   emailUsageDb,
-  walletDb, 
   userSubscriptionsDb
 } from '@/lib/database';
 import { neon } from '@neondatabase/serverless';
@@ -66,7 +65,7 @@ export async function POST(request) {
       }
     }
 
-    // Get the AIML API key from environment variables
+    // Get the GEMINI API key from environment variables
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
@@ -182,31 +181,30 @@ export async function POST(request) {
       result.body = result.body + '\n\n---\nPowered by OpenPromote ⚡';
     }
 
-    // Track usage
+    // Track usage for authenticated users
     if (user) {
       try {
         const subscription = await userSubscriptionsDb.getCurrent(user.id);
         
+        // For both Free and Pro users, decrement package generations
         if (subscription.plan_name === 'Free') {
+          // Increment generation count for Free plan
           await emailUsageDb.incrementGeneration(user.id);
+          console.log(`✅ Free plan generation tracked for user ${user.id}`);
         } else if (subscription.plan_name === 'Pro') {
-          await walletDb.deduct(
-            user.id,
-            subscription.price_per_generation,
-            'generation',
-            `Generated: ${result.subject}`
-          );
-          
+          // Decrement package generations for Pro plan
           await sql`
-            UPDATE email_usage
-            SET total_spent = total_spent + ${subscription.price_per_generation}
-            WHERE user_id = ${user.id} 
-              AND period_start <= NOW() 
-              AND period_end >= NOW()
+            UPDATE user_subscriptions
+            SET 
+              package_generations_remaining = GREATEST(package_generations_remaining - 1, 0),
+              updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ${user.id}
           `;
+          console.log(`✅ Pro plan generation tracked for user ${user.id}`);
         }
       } catch (error) {
         console.error('Failed to track usage:', error);
+        // Don't fail the request if usage tracking fails
       }
     } else {
       // Save device ID for anonymous users

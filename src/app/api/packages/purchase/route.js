@@ -50,7 +50,7 @@ export async function POST(request) {
       );
     }
 
-    // TODO: Integrate payment gateway here
+    // ------------------- TODO: Integrate payment gateway here -------------------
     // For now, we'll just assign the package
     // In production, this should only happen after successful payment
 

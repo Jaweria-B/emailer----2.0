@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Sparkles, Mail, Zap, Users, TrendingUp, ArrowRight, 
-  CheckCircle, Clock, Shield, Target, Globe, Send, 
+import {
+  Sparkles, Mail, Zap, Users, TrendingUp, ArrowRight,
+  CheckCircle, Clock, Shield, Target, Globe, Send,
   BarChart, Star, Briefcase, GraduationCap, Megaphone, Building
 } from 'lucide-react';
-import Button from "@/components/button"; 
+import Button from "@/components/button";
 import LinkButton from '@/components/linkButton';
 
 // Animated Typing Hero Section
@@ -103,7 +103,7 @@ const HeroSection = ({ onGetStarted }) => {
         <div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" style={{ backgroundColor: '#3b82f6' }}></div>
       </div>
 
-      <div className="container mx-auto px-4 relative" style={{ zIndex: 10 }}>
+      <div className="" style={{ zIndex: 10 }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             {/* Badge */}
@@ -220,7 +220,7 @@ const HeroSection = ({ onGetStarted }) => {
                       setIsDeleting(false);
                     }}
                     className="w-3 h-3 rounded-full transition-all duration-300"
-                    style={{ 
+                    style={{
                       backgroundColor: currentUserIndex === index ? '#3b82f6' : '#d1d5db',
                       transform: currentUserIndex === index ? 'scale(1.2)' : 'scale(1)'
                     }}

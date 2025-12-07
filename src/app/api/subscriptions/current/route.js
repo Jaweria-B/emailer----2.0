@@ -1,3 +1,6 @@
+import { NextResponse } from 'next/server';
+import { sessionDb, userSubscriptionsDb, emailUsageDb } from '@/lib/database';
+
 export async function GET(request) {
   try {
     const sessionToken = request.cookies.get('session_token')?.value;

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Building, LogOut, UserPlus, LogIn, Mail, DollarSign, Menu, X, ChevronDown, Waypoints  } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Button from './button';
+import LinkButton from './linkButton';
 
 const Header = ({ user, onLogout, isLoadingUser }) => {
   const [showProfile, setShowProfile] = useState(false);
@@ -73,13 +74,14 @@ const Header = ({ user, onLogout, isLoadingUser }) => {
             <nav className="hidden md:flex items-center gap-2">
               
               {/* Pricing Link */}
-              <Button
+              <LinkButton
+                href='/#pricing'
                 variant="ghost"
                 onClick={() => router.push('/pricing')}
                 icon={<DollarSign className="h-4 w-4" />}
               >
                 Pricing
-              </Button>
+              </LinkButton>
 
               {/* Divider */}
               <div 
@@ -216,9 +218,9 @@ const Header = ({ user, onLogout, isLoadingUser }) => {
             <div className="px-4 py-3 space-y-2">
               
               {/* Pricing */}
-              <button
+              <LinkButton
+              href='/#pricing'
                 onClick={() => {
-                  router.push('/pricing');
                   setShowMobileMenu(false);
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -228,7 +230,7 @@ const Header = ({ user, onLogout, isLoadingUser }) => {
               >
                 <DollarSign className="h-4 w-4" />
                 Pricing
-              </button>
+              </LinkButton>
 
               {/* Divider */}
               <div 

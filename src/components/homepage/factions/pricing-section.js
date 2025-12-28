@@ -695,7 +695,7 @@ const PricingSection = () => {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "1.5rem",
-            maxWidth: "1200px",
+            maxWidth: "2000px",
             margin: "0 auto 3rem auto",
           }}
         >
@@ -941,10 +941,7 @@ const PricingSection = () => {
               </div>
             );
           })}
-        </div>
 
-        {/* ROW 4: Business Card */}
-        <div style={{ maxWidth: "400px", margin: "0 auto" }}>
           <div
             style={{
               padding: "1.5rem",
@@ -1102,6 +1099,11 @@ const PricingSection = () => {
             </Button>
           </div>
         </div>
+
+        {/* ROW 4: Business Card */}
+        {/* <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+
+        </div> */}
 
         {/* Info Section */}
         <div

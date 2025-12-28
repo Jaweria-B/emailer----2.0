@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
-  X,
   Loader2,
   Sparkles,
   Crown,
@@ -12,11 +11,10 @@ import {
   Mail,
   Zap,
   AlertCircle,
-  Package2,
   PackageOpen,
+  Globe,
 } from "lucide-react";
 import Button from "@/components/button";
-import LinkButton from "@/components/linkButton";
 import { useAuthContext } from "@/providers/AuthProvider";
 
 const PricingSection = () => {
@@ -28,19 +26,32 @@ const PricingSection = () => {
   const [currentPackage, setCurrentPackage] = useState(null);
   const [purchasingPackageId, setPurchasingPackageId] = useState(null);
 
+  // Regional pricing states
+  const [currency, setCurrency] = useState("PKR");
+  const [region, setRegion] = useState("PK");
+  const [exchangeRate, setExchangeRate] = useState(280);
+
   useEffect(() => {
-    fetchData();
+    detectRegionAndFetchData();
   }, [user, isLoadingUser]);
 
-  const fetchData = async () => {
+  const detectRegionAndFetchData = async () => {
     try {
-      const [packagesRes, subRes] = await Promise.all([
-        fetch("/api/packages"),
-        user
-          ? fetch("/api/subscriptions/current")
-          : Promise.resolve({ ok: false }),
-      ]);
+      // Detect region first
+      const regionRes = await fetch("/api/region/detect");
+      let detectedCurrency = "PKR";
+      if (regionRes.ok) {
+        const regionData = await regionRes.json();
+        setCurrency(regionData.currency);
+        setRegion(regionData.region);
+        setExchangeRate(regionData.exchange_rate);
+        detectedCurrency = regionData.currency;
+      }
 
+      // Fetch packages based on detected currency
+      const packagesRes = await fetch(
+        `/api/packages?currency=${detectedCurrency}`
+      );
       if (packagesRes.ok) {
         const packagesData = await packagesRes.json();
         const filteredPackages = packagesData.packages.filter(
@@ -49,12 +60,16 @@ const PricingSection = () => {
         setPackages(filteredPackages);
       }
 
-      if (subRes.ok && user) {
-        const subData = await subRes.json();
-        setSubscriptionData(subData.subscription);
+      // Fetch subscription data if user is logged in
+      if (user) {
+        const subRes = await fetch("/api/subscriptions/current");
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          setSubscriptionData(subData.subscription);
 
-        if (subData.subscription?.plan_name === "Pro" && subData.package) {
-          setCurrentPackage(subData.package);
+          if (subData.subscription?.plan_name === "Pro" && subData.package) {
+            setCurrentPackage(subData.package);
+          }
         }
       }
     } catch (error) {
@@ -66,74 +81,51 @@ const PricingSection = () => {
 
   const handlePurchase = async (pkg) => {
     if (!user) {
-      router.push("/login");
+      router.push("/login?redirect=/#pricing");
       return;
     }
 
-    if (subscriptionData?.plan_name === "Free") {
-      setPurchasingPackageId(pkg.id);
+    setPurchasingPackageId(pkg.id);
 
-      try {
+    try {
+      // Check if user is on Free plan - auto-upgrade to Pro
+      if (subscriptionData?.plan_name === "Free") {
         const upgradeRes = await fetch("/api/subscriptions/upgrade", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan_id: 2 }),
+          body: JSON.stringify({ plan_id: 2 }), // Pro plan ID
         });
 
         if (!upgradeRes.ok) {
-          const error = await upgradeRes.json();
           alert("Failed to upgrade to Pro plan. Please try again.");
           setPurchasingPackageId(null);
           return;
         }
+      }
 
-        const purchaseRes = await fetch("/api/packages/purchase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ package_id: pkg.id }),
-        });
+      // Redirect to Stripe checkout with display currency
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          package_id: pkg.id,
+          display_currency: currency, // Pass the currency shown to user
+        }),
+      });
 
-        if (purchaseRes.ok) {
-          alert(
-            `✅ Successfully purchased ${pkg.name} package!\n\nYou now have ${pkg.credits} email generations with ${pkg.sends_per_email} sends per email.`
-          );
-          await fetchData();
-        } else {
-          const error = await purchaseRes.json();
-          alert(error.error || "Failed to purchase package");
-        }
-      } catch (error) {
-        alert("An error occurred. Please try again.");
-      } finally {
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        // Redirect to Stripe hosted checkout
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to create checkout session");
         setPurchasingPackageId(null);
       }
-      return;
-    }
-
-    if (subscriptionData?.plan_name === "Pro") {
-      setPurchasingPackageId(pkg.id);
-
-      try {
-        const purchaseRes = await fetch("/api/packages/purchase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ package_id: pkg.id }),
-        });
-
-        if (purchaseRes.ok) {
-          alert(
-            `✅ Successfully purchased ${pkg.name} package!\n\nYou now have ${pkg.credits} email generations with ${pkg.sends_per_email} sends per email.`
-          );
-          await fetchData();
-        } else {
-          const error = await purchaseRes.json();
-          alert(error.error || "Failed to purchase package");
-        }
-      } catch (error) {
-        alert("An error occurred. Please try again.");
-      } finally {
-        setPurchasingPackageId(null);
-      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Something went wrong. Please try again.");
+      setPurchasingPackageId(null);
     }
   };
 
@@ -153,6 +145,22 @@ const PricingSection = () => {
     alert(
       "Contact form coming soon!\n\nFor now, please email us at: business@openpromote.uinfo.org"
     );
+  };
+
+  const formatPrice = (price) => {
+    if (currency === "PKR") {
+      return `PKR ${price.toLocaleString()}`;
+    } else {
+      return `$${price.toFixed(2)}`;
+    }
+  };
+
+  const getConvertedPrice = (price) => {
+    if (currency === "PKR") {
+      const usd = price / exchangeRate;
+      return `(~$${usd.toFixed(2)} USD)`;
+    }
+    return "";
   };
 
   const isFree = subscriptionData?.plan_name === "Free";
@@ -221,9 +229,41 @@ const PricingSection = () => {
           >
             Choose Your Plan
           </p>
+
+          {/* Region Indicator */}
+          <div style={{ marginTop: "1rem" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.5rem 1rem",
+                borderRadius: "9999px",
+                backgroundColor: "var(--primary-lightest)",
+                border: "1px solid var(--primary-lighter)",
+              }}
+            >
+              <Globe
+                style={{
+                  width: "1rem",
+                  height: "1rem",
+                  color: "var(--primary-color)",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "var(--primary-active)",
+                }}
+              >
+                Showing prices in {currency} {region === "PK" && "(Pakistan)"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* ROW 1: Current Plan Status (Only for authenticated users with packages) */}
+        {/* Current Package Status (Only for Pro users with active packages) */}
         {user && isPro && currentPackage && (
           <div
             style={{
@@ -395,301 +435,300 @@ const PricingSection = () => {
           </div>
         )}
 
-        {/* ROW 2: Free Plan Card */}
-        {!isPro ||
-          (!user && (
-            <div style={{ maxWidth: "400px", margin: "0 auto 3rem auto" }}>
-              <div
-                style={{
-                  position: "relative",
-                  padding: "1.5rem",
-                  borderRadius: "1rem",
-                  border: isFree
-                    ? "2px solid var(--success)"
-                    : "1px solid var(--border-light)",
-                  backgroundColor: "var(--background)",
-                  boxShadow: "var(--shadow-md)",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "var(--shadow-xl)";
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "var(--shadow-md)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                {isFree && (
-                  <div
+        {/* Free Plan Card */}
+        {(!isPro || !user) && (
+          <div style={{ maxWidth: "400px", margin: "0 auto 3rem auto" }}>
+            <div
+              style={{
+                position: "relative",
+                padding: "1.5rem",
+                borderRadius: "1rem",
+                border: isFree
+                  ? "2px solid var(--success)"
+                  : "1px solid var(--border-light)",
+                backgroundColor: "var(--background)",
+                boxShadow: "var(--shadow-md)",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "var(--shadow-xl)";
+                e.currentTarget.style.transform = "translateY(-4px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              {isFree && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "-12px",
+                    right: "1rem",
+                  }}
+                >
+                  <span
                     style={{
-                      position: "absolute",
-                      top: "-12px",
-                      right: "1rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                      backgroundColor: "var(--success)",
+                      color: "white",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "9999px",
                     }}
                   >
+                    <Check style={{ width: "0.75rem", height: "0.75rem" }} />
+                    ACTIVE
+                  </span>
+                </div>
+              )}
+
+              <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <PackageOpen
+                    style={{
+                      width: "2rem",
+                      height: "2rem",
+                      color: "var(--primary-color)",
+                    }}
+                  />
+                </div>
+                <h3
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: "bold",
+                    marginBottom: "0.5rem",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  Free Plan
+                </h3>
+                <div
+                  style={{
+                    fontSize: "2.5rem",
+                    fontWeight: "bold",
+                    marginBottom: "0.25rem",
+                    color: "var(--primary-color)",
+                  }}
+                >
+                  {currency === "PKR" ? "Rs.0" : "$0"}
+                </div>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  per month
+                </p>
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <Check
+                    style={{
+                      width: "1rem",
+                      height: "1rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
                     <span
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        backgroundColor: "var(--success)",
-                        color: "white",
-                        fontSize: "0.75rem",
-                        fontWeight: "bold",
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "9999px",
+                        fontSize: "0.875rem",
+                        fontWeight: 600,
+                        color: "var(--foreground)",
+                        display: "block",
                       }}
                     >
-                      <Check style={{ width: "0.75rem", height: "0.75rem" }} />
-                      ACTIVE
+                      5 Email Generations
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      per month
                     </span>
                   </div>
-                )}
+                </div>
 
-                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-                  <div
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <Check
                     style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      marginBottom: "0.75rem",
+                      width: "1rem",
+                      height: "1rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
                     }}
-                  >
-                    <PackageOpen
+                  />
+                  <div style={{ flex: 1 }}>
+                    <span
                       style={{
-                        width: "2rem",
-                        height: "2rem",
-                        color: "var(--primary-color)",
+                        fontSize: "0.875rem",
+                        fontWeight: 600,
+                        color: "var(--foreground)",
+                        display: "block",
                       }}
-                    />
+                    >
+                      100 Recipients per Email
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      send to up to 100 people
+                    </span>
                   </div>
-                  <h3
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <Check
                     style={{
-                      fontSize: "1.5rem",
-                      fontWeight: "bold",
-                      marginBottom: "0.5rem",
+                      width: "1rem",
+                      height: "1rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 600,
+                        color: "var(--foreground)",
+                        display: "block",
+                      }}
+                    >
+                      100 Sends per Day
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      daily sending limit
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Check
+                    style={{
+                      width: "1rem",
+                      height: "1rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
                       color: "var(--foreground)",
                     }}
                   >
-                    Free Plan
-                  </h3>
-                  <div
-                    style={{
-                      fontSize: "2.5rem",
-                      fontWeight: "bold",
-                      marginBottom: "0.25rem",
-                      color: "var(--primary-color)",
-                    }}
-                  >
-                    Rs.0
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    per month
-                  </p>
+                    AI-Powered Email Generation
+                  </span>
                 </div>
 
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <Check
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--success)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <span
-                        style={{
-                          fontSize: "0.875rem",
-                          fontWeight: 600,
-                          color: "var(--foreground)",
-                          display: "block",
-                        }}
-                      >
-                        5 Email Generations
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        per month
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <Check
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--success)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <span
-                        style={{
-                          fontSize: "0.875rem",
-                          fontWeight: 600,
-                          color: "var(--foreground)",
-                          display: "block",
-                        }}
-                      >
-                        100 Recipients per Email
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        send to up to 100 people
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <Check
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--success)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <span
-                        style={{
-                          fontSize: "0.875rem",
-                          fontWeight: 600,
-                          color: "var(--foreground)",
-                          display: "block",
-                        }}
-                      >
-                        100 Sends per Day
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        daily sending limit
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <Check
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--success)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "var(--foreground)",
-                      }}
-                    >
-                      AI-Powered Email Generation
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <Check
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--success)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "var(--foreground)",
-                      }}
-                    >
-                      Includes Branding
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleFreeAction}
-                  variant={isFree ? "outline" : "primary"}
-                  style={{ width: "100%" }}
-                  disabled={isFree}
-                  icon={<Sparkles style={{ width: "1rem", height: "1rem" }} />}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
                 >
-                  {!user
-                    ? "Get Started Free"
-                    : isFree
-                    ? "Current Plan"
-                    : "View Free Features"}
-                </Button>
-
-                {!isFree && (
-                  <p
+                  <Check
                     style={{
-                      textAlign: "center",
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                      marginTop: "0.75rem",
+                      width: "1rem",
+                      height: "1rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--foreground)",
                     }}
                   >
-                    Want more? Check out our Pro packages below
-                  </p>
-                )}
+                    Includes Branding
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
 
-        {/* ROW 3: Pro Package Cards */}
+              <Button
+                onClick={handleFreeAction}
+                variant={isFree ? "outline" : "primary"}
+                style={{ width: "100%" }}
+                disabled={isFree}
+                icon={<Sparkles style={{ width: "1rem", height: "1rem" }} />}
+              >
+                {!user
+                  ? "Get Started Free"
+                  : isFree
+                  ? "Current Plan"
+                  : "View Free Features"}
+              </Button>
+
+              {!isFree && (
+                <p
+                  style={{
+                    textAlign: "center",
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                    marginTop: "0.75rem",
+                  }}
+                >
+                  Want more? Check out our Pro packages below
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pro Package Cards */}
         <div
           style={{
             display: "grid",
@@ -700,7 +739,7 @@ const PricingSection = () => {
           }}
         >
           {packages.map((pkg) => {
-            const isPopular = pkg.name === "Pro" || pkg.name === "Premium";
+            const isPopular = pkg.name === "Basic";
             const isCurrentPackage = currentPackage?.package_name === pkg.name;
 
             return (
@@ -802,8 +841,19 @@ const PricingSection = () => {
                       color: "var(--primary-color)",
                     }}
                   >
-                    Rs.{pkg.price}
+                    {formatPrice(pkg.price)}
                   </div>
+                  {currency === "PKR" && (
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-tertiary)",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {getConvertedPrice(pkg.price)}
+                    </p>
+                  )}
                   <p
                     style={{
                       fontSize: "0.75rem",
@@ -933,15 +983,29 @@ const PricingSection = () => {
                   }
                 >
                   {purchasingPackageId === pkg.id
-                    ? "Processing..."
+                    ? "Redirecting..."
                     : isCurrentPackage
                     ? "Current Package"
                     : "Purchase Now"}
                 </Button>
+
+                {/* {currency === "PKR" && !isCurrentPackage && (
+                  <p
+                    style={{
+                      textAlign: "center",
+                      fontSize: "0.75rem",
+                      color: "var(--text-tertiary)",
+                      marginTop: "0.75rem",
+                    }}
+                  >
+                    Secure payment via Stripe
+                  </p>
+                )} */}
               </div>
             );
           })}
 
+          {/* Business Card */}
           <div
             style={{
               padding: "1.5rem",
@@ -1100,11 +1164,6 @@ const PricingSection = () => {
           </div>
         </div>
 
-        {/* ROW 4: Business Card */}
-        {/* <div style={{ maxWidth: "400px", margin: "0 auto" }}>
-
-        </div> */}
-
         {/* Info Section */}
         <div
           style={{
@@ -1238,7 +1297,7 @@ const PricingSection = () => {
                     color: "var(--foreground)",
                   }}
                 >
-                  Bulk Sending
+                  Secure Payment
                 </p>
                 <p
                   style={{
@@ -1246,8 +1305,8 @@ const PricingSection = () => {
                     color: "var(--text-secondary)",
                   }}
                 >
-                  Send each email to hundreds of recipients based on your
-                  package
+                  All payments processed securely through Stripe.{" "}
+                  {currency === "PKR" && "PKR prices shown, charged in USD"}
                 </p>
               </div>
             </div>

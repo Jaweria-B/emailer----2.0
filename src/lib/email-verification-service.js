@@ -16,7 +16,9 @@ const createTransporter = () => {
       // Do not fail on invalid certs
       rejectUnauthorized: false
     },
-    dkim: true,
+    // dkim: true,
+    debug: true,
+    logger: true,
     from: `"Email Curator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`
   });
 };

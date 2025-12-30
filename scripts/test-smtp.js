@@ -37,8 +37,8 @@ if (!user || !pass) {
 
 const configs = [
     {
-        port: 465,
-        secure: true,
+        port: port,
+        secure: process.env.SMTP_SECURE || true,
         name: 'Port 465 (SSL/TLS)'
     },
     // {
@@ -62,9 +62,9 @@ async function testConnections() {
             },
             tls: {
                 rejectUnauthorized: false
-            },
-            debug: true,
-            logger: true
+            }, //dkim: true,
+            //debug: true,
+            //logger: true
         });
 
         try {

@@ -9,7 +9,7 @@ const createTransporter = () => {
     secure: process.env.SMTP_SECURE || false, // true for 465 (SSL), false for other ports
     auth: {
       user: process.env.SMTP_USER,
-      pass: '_VNkv*B$tW#qLC9',
+      pass: 'C}T#2l720LQi',
     },
     // Additional options for better compatibility
     tls: {

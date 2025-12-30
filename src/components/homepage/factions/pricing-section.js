@@ -33,7 +33,7 @@ const PricingSection = () => {
 
   useEffect(() => {
     detectRegionAndFetchData();
-  }, [user, isLoadingUser]);
+  }, [user?.id, isLoadingUser]);
 
   const detectRegionAndFetchData = async () => {
     try {
@@ -147,11 +147,25 @@ const PricingSection = () => {
     );
   };
 
-  const formatPrice = (price) => {
+  const formatPrice = (price, currency = "USD") => {
+    // Convert to number (works for both strings and numbers)
+    const numPrice = parseFloat(price);
+
+    // Validation
+    if (isNaN(numPrice) || numPrice < 0) {
+      console.error("Invalid price value:", price);
+      return currency === "PKR" ? "₨0" : "$0.00";
+    }
+
+    // Format based on currency
     if (currency === "PKR") {
-      return `PKR ${price.toLocaleString()}`;
+      // Pakistani Rupees - no decimals, whole numbers
+      return `₨${numPrice.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+      // Example: ₨1,200
     } else {
-      return `$${price.toFixed(2)}`;
+      // US Dollars - 2 decimals
+      return `$${numPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+      // Example: $1,200.00
     }
   };
 
@@ -231,7 +245,7 @@ const PricingSection = () => {
           </p>
 
           {/* Region Indicator */}
-          <div style={{ marginTop: "1rem" }}>
+          {/* <div style={{ marginTop: "1rem" }}>
             <div
               style={{
                 display: "inline-flex",
@@ -260,7 +274,7 @@ const PricingSection = () => {
                 Showing prices in {currency} {region === "PK" && "(Pakistan)"}
               </span>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Current Package Status (Only for Pro users with active packages) */}
@@ -520,7 +534,7 @@ const PricingSection = () => {
                     color: "var(--primary-color)",
                   }}
                 >
-                  {currency === "PKR" ? "Rs.0" : "$0"}
+                  {formatPrice(0, currency)}
                 </div>
                 <p
                   style={{
@@ -765,7 +779,7 @@ const PricingSection = () => {
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {isPopular && (
+                {isPopular && !isCurrentPackage && (
                   <div
                     style={{
                       position: "absolute",
@@ -795,7 +809,7 @@ const PricingSection = () => {
                   </div>
                 )}
 
-                {isCurrentPackage && (
+                {isCurrentPackage && !isPopular && (
                   <div
                     style={{
                       position: "absolute",
@@ -822,6 +836,64 @@ const PricingSection = () => {
                   </div>
                 )}
 
+                {isPopular && isCurrentPackage && (
+                  <>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "-12px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          backgroundColor: "var(--primary-color)",
+                          color: "white",
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "9999px",
+                        }}
+                      >
+                        <Sparkles
+                          style={{ width: "0.875rem", height: "0.875rem" }}
+                        />
+                        MOST POPULAR
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "-12px",
+                        right: "1rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          backgroundColor: "var(--success)",
+                          color: "white",
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "9999px",
+                        }}
+                      >
+                        <Check
+                          style={{ width: "0.75rem", height: "0.75rem" }}
+                        />
+                        ACTIVE
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
                   <h3
                     style={{
@@ -837,11 +909,14 @@ const PricingSection = () => {
                     style={{
                       fontSize: "2.5rem",
                       fontWeight: "bold",
-                      marginBottom: "0.25rem",
                       color: "var(--primary-color)",
                     }}
                   >
-                    {formatPrice(pkg.price)}
+                    {
+                      currency === "PKR"
+                        ? formatPrice(pkg.price_pkr, "PKR") // Use PKR price for Pakistani users
+                        : formatPrice(pkg.price_usd, "USD") // Use USD price for global users
+                    }
                   </div>
                   {currency === "PKR" && (
                     <p

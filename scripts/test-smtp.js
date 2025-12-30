@@ -41,11 +41,11 @@ const configs = [
         secure: true,
         name: 'Port 465 (SSL/TLS)'
     },
-    {
-        port: 587,
-        secure: false, // STARTTLS
-        name: 'Port 587 (STARTTLS)'
-    }
+    // {
+    //     port: 587,
+    //     secure: false, // STARTTLS
+    //     name: 'Port 587 (STARTTLS)'
+    // }
 ];
 
 async function testConnections() {
@@ -70,6 +70,14 @@ async function testConnections() {
         try {
             await transporter.verify();
             console.log(`✅ Success on ${config.name}: Server is ready to take our messages`);
+            const mailOptions = {
+                from: `"EmailCurator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                to: 'contact@asloobulhayat.com',
+                subject: 'Test Email',
+                html: '<h1>Test Email</h1>',
+                text: 'Test Email'
+            };
+            await transporter.sendMail(mailOptions);
             return; // Exit after first success
         } catch (error) {
             console.error(`❌ Failed on ${config.name}:`);

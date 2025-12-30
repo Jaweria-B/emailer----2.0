@@ -9,14 +9,15 @@ const createTransporter = () => {
     secure: process.env.SMTP_SECURE || false, // true for 465 (SSL), false for other ports
     auth: {
       user: process.env.SMTP_USER,
-      pass: '_VNkv*B$tW#qLC9',
+      pass: process.env.SMTP_PASSWORD,
     },
     // Additional options for better compatibility
     tls: {
       // Do not fail on invalid certs
       rejectUnauthorized: false
     },
-    from: `"EmailCurator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`
+    dkim: true,
+    from: `"Email Curator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`
   });
 };
 
@@ -29,23 +30,22 @@ export const generateVerificationCode = () => {
 export const sendVerificationEmail = async (email, code, name, verificationType = 'registration') => {
   try {
     const transporter = createTransporter();
-
     // Different subject and content based on verification type
     const isLogin = verificationType === 'login';
-    const subject = isLogin 
-      ? 'Your EmailCurator Login Code' 
+    const subject = isLogin
+      ? 'Your Email Curator Login Code'
       : 'Verify Your EmailCurator Account';
-    
-    const title = isLogin 
-      ? 'Login to EmailCurator' 
-      : 'Welcome to EmailCurator!';
-    
-    const greeting = isLogin 
-      ? `Hi ${name}, here's your login code` 
+
+    const title = isLogin
+      ? 'Login to Email Curator'
+      : 'Welcome to Email Curator!';
+
+    const greeting = isLogin
+      ? `Hi ${name}, here's your login code`
       : `Hi ${name}, verify your account to get started`;
-    
-    const instructions = isLogin 
-      ? 'Please use the verification code below to complete your login:' 
+
+    const instructions = isLogin
+      ? 'Please use the verification code below to complete your login:'
       : 'Please use the verification code below to complete your registration:';
 
     const mailOptions = {

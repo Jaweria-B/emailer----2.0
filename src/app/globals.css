@@ -11,34 +11,34 @@
   --primary-light: #6ba3f7;
   --primary-lighter: #a8c9fa;
   --primary-lightest: #e3f0ff;
-
+  
   /* Background Colors */
   --background: #ffffff;
   --background-secondary: #f8f9fa;
   --background-tertiary: #f3f4f6;
-
+  
   /* Text Colors */
   --foreground: #1f2937;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
-
+  
   /* Border Colors */
   --border-light: #e5e7eb;
   --border-medium: #d1d5db;
   --border-dark: #9ca3af;
-
+  
   /* Success Colors */
   --success: #10b981;
   --success-light: #d1fae5;
-
+  
   /* Error Colors */
   --error: #ef4444;
   --error-light: #fee2e2;
-
+  
   /* Warning Colors */
   --warning: #f59e0b;
   --warning-light: #fef3c7;
-
+  
   /* Neutral Grays */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
@@ -50,7 +50,7 @@
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-
+  
   /* Header Colors */
   --header-bg: #ffffff;
   --header-text: #1f2937;
@@ -58,34 +58,19 @@
   --header-border: #e5e7eb;
 
   /* Home page specific gradients and colors */
-  --gradient-hero: linear-gradient(
-    135deg,
-    #dbeafe 0%,
-    #f3e8ff 50%,
-    #fce7f3 100%
-  );
-  --gradient-primary: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    #9333ea 100%
-  );
+  --gradient-hero: linear-gradient(135deg, #dbeafe 0%, #f3e8ff 50%, #fce7f3 100%);
+  --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, #9333ea 100%);
   --gradient-accent: linear-gradient(135deg, #ec4899 0%, #ef4444 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
   --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
   --gradient-info: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-
-  /* Benefits Section Gradients */
-  --gradient-professional: linear-gradient(135deg, #4287f5 0%, #3b76d9 100%);
-  --gradient-student: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  --gradient-marketer: linear-gradient(135deg, #3b82f6 0%, #4287f5 100%);
-  --gradient-business: linear-gradient(135deg, #2968d8 0%, #1e54b7 100%);
-
+  
   /* Accent colors */
   --accent-purple: #9333ea;
   --accent-pink: #ec4899;
   --accent-orange: #f97316;
   --accent-teal: #14b8a6;
-
+  
   /* Feature card colors */
   --feature-yellow-start: #facc15;
   --feature-yellow-end: #f97316;
@@ -99,33 +84,33 @@
   --feature-indigo-end: #3b82f6;
   --feature-purple-start: #a78bfa;
   --feature-purple-end: #ec4899;
-
+  
   /* Blob animation colors */
   --blob-purple: rgba(216, 180, 254, 0.3);
   --blob-blue: rgba(147, 197, 253, 0.3);
   --blob-pink: rgba(251, 207, 232, 0.3);
 
+  
   /* Button Colors */
   --btn-ghost-text: #6b7280;
   --btn-ghost-hover-bg: #f3f4f6;
   --btn-ghost-hover-text: #1f2937;
-
+  
   --btn-primary-bg: #4287f5;
   --btn-primary-hover-bg: #2968d8;
   --btn-primary-text: #ffffff;
-
+  
   --btn-outline-border: #e5e7eb;
   --btn-outline-text: #4b5563;
   --btn-outline-hover-bg: #f9fafb;
   --btn-outline-hover-border: #d1d5db;
-
+  
   /* Dropdown Colors */
   --dropdown-bg: #ffffff;
   --dropdown-border: #e5e7eb;
-  --dropdown-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --dropdown-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --dropdown-item-hover: #f3f4f6;
-
+  
   /* Footer Colors */
   --footer-bg-start: #4287f5;
   --footer-bg-via: #3b76d9;
@@ -137,7 +122,7 @@
   --footer-cta-bg: #ffffff;
   --footer-cta-text: #1f2937;
   --footer-cta-text-secondary: #6b7280;
-
+  
   /* Email Sender Colors */
   --sender-bg-gradient-start: #4287f5;
   --sender-bg-gradient-end: #2968d8;
@@ -154,25 +139,22 @@
   --sender-success: #10b981;
   --sender-error: #ef4444;
   --sender-warning: #f59e0b;
-
+  
   /* Footer Colors */
   --footer-bg: #f9fafb;
   --footer-border: #e5e7eb;
   --footer-text: #6b7280;
   --footer-text-hover: #1f2937;
   --footer-heading: #1f2937;
-
+  
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-
+  
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -193,19 +175,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+
 /* ============================================
   Blob animations for hero section
   ============================================ */
 @keyframes blob {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
   }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
   }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
   }
 }
 
@@ -346,25 +328,6 @@ body {
 
 .bg-primary {
   background-color: var(--primary-color);
-}
-
-/* ============================================
-   Audience Gradient Classes
-   ============================================ */
-.gradient-professional {
-  background: var(--gradient-professional);
-}
-
-.gradient-student {
-  background: var(--gradient-student);
-}
-
-.gradient-marketer {
-  background: var(--gradient-marketer);
-}
-
-.gradient-business {
-  background: var(--gradient-business);
 }
 
 /* ============================================

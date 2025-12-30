@@ -1,1 +1,1 @@
-### Open Promote
+### Open Promote email tool

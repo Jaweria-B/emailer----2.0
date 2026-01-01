@@ -1,8 +1,12 @@
-import nodemailer from 'nodemailer';
-import { NextResponse } from 'next/server';
-import { sessionDb, userSubscriptionsDb, checkEmailLimit, emailUsageDb } from '@/lib/database';
+// app/api/send-emails/route.js
+import nodemailer from "nodemailer";
+import { NextResponse } from "next/server";
+import { sessionDb } from "@/lib/database";
+import { neon } from "@neondatabase/serverless";
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sql = neon(process.env.DATABASE_URL);
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const createBatches = (array, batchSize) => {
   const batches = [];
@@ -12,22 +16,24 @@ const createBatches = (array, batchSize) => {
   return batches;
 };
 
-// Create a fresh transporter
+/**
+ * Create a fresh nodemailer transporter
+ */
 const createTransporter = (smtpConfig) => {
   let transporterConfig;
 
-  if (!smtpConfig.host || smtpConfig.host === 'smtp.gmail.com') {
+  if (!smtpConfig.host || smtpConfig.host === "smtp.gmail.com") {
     transporterConfig = {
-      service: 'gmail',
+      service: "gmail",
       auth: {
         user: smtpConfig.auth.user,
         pass: smtpConfig.auth.pass,
       },
-      pool: true, // Use connection pooling
-      maxConnections: 1, // Limit to 1 connection for better stability
-      maxMessages: 50, // Recreate connection after 50 messages
-      rateDelta: 1000, // 1 second
-      rateLimit: 5, // Max 5 emails per second
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 50,
+      rateDelta: 1000,
+      rateLimit: 5,
     };
   } else {
     transporterConfig = {
@@ -39,7 +45,7 @@ const createTransporter = (smtpConfig) => {
         pass: smtpConfig.auth.pass,
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
       },
       pool: true,
       maxConnections: 2,
@@ -48,14 +54,17 @@ const createTransporter = (smtpConfig) => {
       rateLimit: 10,
     };
 
-    if (smtpConfig.host.includes('hostinger.com')) {
+    if (smtpConfig.host.includes("hostinger.com")) {
       transporterConfig.secure = true;
       transporterConfig.port = smtpConfig.port || 465;
-    } else if (smtpConfig.host.includes('outlook.com') || smtpConfig.host.includes('hotmail.com')) {
+    } else if (
+      smtpConfig.host.includes("outlook.com") ||
+      smtpConfig.host.includes("hotmail.com")
+    ) {
       transporterConfig.secure = false;
       transporterConfig.port = smtpConfig.port || 587;
       transporterConfig.requireTLS = true;
-    } else if (smtpConfig.host.includes('yahoo.com')) {
+    } else if (smtpConfig.host.includes("yahoo.com")) {
       transporterConfig.secure = false;
       transporterConfig.port = smtpConfig.port || 587;
     }
@@ -66,222 +75,305 @@ const createTransporter = (smtpConfig) => {
 
 export async function POST(request) {
   let transporter = null;
-  let userId = null;
-  
+
   try {
-    const { emails, subject, body, smtpConfig, attachments } = await request.json();
+    const { emails, subject, body, smtpConfig, attachments } =
+      await request.json();
+
+    // ============================================
+    // VALIDATE REQUEST DATA
+    // ============================================
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
-      return NextResponse.json({ message: 'No email addresses provided' }, { status: 400 });
+      return NextResponse.json(
+        { error: "No email addresses provided" },
+        { status: 400 }
+      );
     }
 
     if (!subject || !body) {
-      return NextResponse.json({ message: 'Subject and body are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Subject and body are required" },
+        { status: 400 }
+      );
     }
 
-    if (!smtpConfig || !smtpConfig.auth || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
-      return NextResponse.json({ message: 'SMTP configuration is required' }, { status: 400 });
+    if (
+      !smtpConfig ||
+      !smtpConfig.auth ||
+      !smtpConfig.auth.user ||
+      !smtpConfig.auth.pass
+    ) {
+      return NextResponse.json(
+        { error: "SMTP configuration is required" },
+        { status: 400 }
+      );
     }
 
-    const sessionToken = request.cookies.get('session_token')?.value;
+    // ============================================
+    // CHECK SEND LIMITS (Authenticated Users Only)
+    // ============================================
+
+    const sessionToken = request.cookies.get("session_token")?.value;
 
     if (sessionToken) {
       const user = await sessionDb.findValid(sessionToken);
+
       if (user) {
-        userId = user.id;
-        const subscription = await userSubscriptionsDb.getCurrent(user.id);
-        
-        // Check daily sending limit for Pro users
-        if (subscription && subscription.plan_name === 'Pro') {
-          const sendCount = emails.length;
-          const limitCheck = await checkEmailLimit(user.id, 'send', sendCount);
-          
-          if (!limitCheck.allowed) {
-            return NextResponse.json(
-              { 
-                error: limitCheck.reason || 'Daily sending limit reached',
-                remaining: limitCheck.remaining,
-                limit: limitCheck.limit
-              },
-              { status: 403 }
-            );
-          }
+        // Fetch user's send limit from users table
+        const userData = await sql`
+          SELECT 
+            id,
+            email,
+            sends_per_email,
+            current_package,
+            generations_remaining
+          FROM users
+          WHERE id = ${user.id}
+        `;
+
+        if (userData.length === 0) {
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 404 }
+          );
         }
+
+        const userLimits = userData[0];
+        const recipientCount = emails.length;
+
+        // Validate recipient count against limit
+        if (recipientCount > userLimits.sends_per_email) {
+          const packageInfo = userLimits.current_package
+            ? `your ${userLimits.current_package} package`
+            : "the free tier";
+
+          console.log(
+            `❌ Send limit exceeded for user ${user.id}: ${recipientCount} > ${userLimits.sends_per_email}`
+          );
+
+          return NextResponse.json(
+            {
+              error: `Recipient limit exceeded. You can send to ${userLimits.sends_per_email} recipients per email with ${packageInfo}.`,
+              limit: userLimits.sends_per_email,
+              requested: recipientCount,
+              exceeded_by: recipientCount - userLimits.sends_per_email,
+              upgrade_suggestion: !userLimits.current_package
+                ? "Purchase a package to increase your recipient limit"
+                : "Purchase a higher-tier package for more recipients per email",
+            },
+            { status: 403 }
+          );
+        }
+
+        console.log(
+          `✅ Send limit validated for user ${user.id}: ${recipientCount}/${userLimits.sends_per_email} recipients`
+        );
       }
+    } else {
+      // Anonymous users can send (no limit check)
+      console.log(
+        `ℹ️ Anonymous user sending to ${emails.length} recipients (no limit)`
+      );
     }
 
-    // Create initial transporter
+    // ============================================
+    // CREATE AND VERIFY TRANSPORTER
+    // ============================================
+
     transporter = createTransporter(smtpConfig);
 
-    // Verify the transporter configuration
     try {
       await transporter.verify();
-      console.log('SMTP connection verified successfully');
+      console.log("✅ SMTP connection verified successfully");
     } catch (verifyError) {
-      console.error('SMTP verification failed:', verifyError);
-      return NextResponse.json({ 
-        message: 'SMTP configuration verification failed',
-        error: verifyError.message 
-      }, { status: 400 });
+      console.error("❌ SMTP verification failed:", verifyError);
+      return NextResponse.json(
+        {
+          error: "SMTP configuration verification failed",
+          details: verifyError.message,
+        },
+        { status: 400 }
+      );
     }
 
-    // Adjusted configuration for Gmail limits
-    const BATCH_SIZE = 20; // Smaller batches
-    const BATCH_DELAY = 5000; // 5 second delay between batches
-    const EMAIL_DELAY = 300; // 300ms delay between emails (safer)
-    const RECONNECT_AFTER = 50; // Recreate transporter every 50 emails
+    // ============================================
+    // SEND EMAILS IN BATCHES
+    // ============================================
+
+    const BATCH_SIZE = 20;
+    const BATCH_DELAY = 5000; // 5 seconds
+    const EMAIL_DELAY = 300; // 300ms
+    const RECONNECT_AFTER = 50;
 
     const emailBatches = createBatches(emails, BATCH_SIZE);
     const results = [];
     let emailsSentCount = 0;
 
-    console.log(`Processing ${emails.length} emails in ${emailBatches.length} batches of ${BATCH_SIZE}`);
+    console.log(
+      `📧 Processing ${emails.length} emails in ${emailBatches.length} batches`
+    );
 
     // Process each batch
     for (let batchIndex = 0; batchIndex < emailBatches.length; batchIndex++) {
       const batch = emailBatches[batchIndex];
       const batchNumber = batchIndex + 1;
-      
-      console.log(`Processing batch ${batchNumber}/${emailBatches.length} with ${batch.length} emails`);
+
+      console.log(
+        `📦 Processing batch ${batchNumber}/${emailBatches.length} (${batch.length} emails)`
+      );
 
       // Recreate transporter periodically to avoid connection issues
       if (emailsSentCount > 0 && emailsSentCount % RECONNECT_AFTER === 0) {
-        console.log('Recreating transporter connection...');
+        console.log("🔄 Recreating transporter connection...");
         await transporter.close();
-        await delay(2000); // Wait 2 seconds before reconnecting
+        await delay(2000);
         transporter = createTransporter(smtpConfig);
         await transporter.verify();
-        console.log('Transporter reconnected');
+        console.log("✅ Transporter reconnected");
       }
 
       // Process emails in current batch
       for (let emailIndex = 0; emailIndex < batch.length; emailIndex++) {
         const email = batch[emailIndex];
-        
+
         try {
           const mailOptions = {
-            from: `"${smtpConfig.fromName || ''}" <${smtpConfig.auth.user}>`,
+            from: `"${smtpConfig.fromName || ""}" <${smtpConfig.auth.user}>`,
             to: email,
             subject: subject,
             text: body,
-            html: body.replace(/\n/g, '<br>'),
-            attachments: attachments || [] 
+            html: body.replace(/\n/g, "<br>"),
+            attachments: attachments || [],
           };
 
           await transporter.sendMail(mailOptions);
-          console.log(`✓ Email ${emailsSentCount + 1} sent successfully to ${email}`);
-          
+          console.log(`✅ Email ${emailsSentCount + 1} sent to ${email}`);
+
           results.push({
             email: email,
             success: true,
             batch: batchNumber,
             batchPosition: emailIndex + 1,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
 
           emailsSentCount++;
-
         } catch (error) {
-          console.error(`✗ Error sending email to ${email}:`, error.message);
-          
-          // Check if it's a connection error and try to reconnect
-          if (error.message.includes('connection') || error.message.includes('timeout')) {
-            console.log('Connection error detected, attempting to reconnect...');
+          console.error(`❌ Error sending to ${email}:`, error.message);
+
+          // Handle connection errors with retry
+          if (
+            error.message.includes("connection") ||
+            error.message.includes("timeout")
+          ) {
+            console.log("🔄 Connection error, attempting reconnect...");
+
             try {
               await transporter.close();
               await delay(3000);
               transporter = createTransporter(smtpConfig);
               await transporter.verify();
-              console.log('Reconnection successful');
-              
+              console.log("✅ Reconnection successful");
+
               // Retry sending this email
               try {
                 await transporter.sendMail(mailOptions);
-                console.log(`✓ Email sent successfully to ${email} after reconnect`);
+                console.log(`✅ Email sent to ${email} after retry`);
+
                 results.push({
                   email: email,
                   success: true,
                   retried: true,
                   batch: batchNumber,
                   batchPosition: emailIndex + 1,
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
                 });
+
                 emailsSentCount++;
                 continue;
               } catch (retryError) {
-                console.error(`Failed again after retry: ${retryError.message}`);
+                console.error(`❌ Retry failed: ${retryError.message}`);
               }
             } catch (reconnectError) {
-              console.error(`Reconnection failed: ${reconnectError.message}`);
+              console.error(
+                `❌ Reconnection failed: ${reconnectError.message}`
+              );
             }
           }
-          
+
+          // Log failure
           results.push({
             email: email,
             success: false,
             error: error.message,
             batch: batchNumber,
             batchPosition: emailIndex + 1,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
         }
 
-        // Add delay between individual emails
+        // Delay between individual emails
         if (emailIndex < batch.length - 1) {
           await delay(EMAIL_DELAY);
         }
       }
 
-      console.log(`Batch ${batchNumber}/${emailBatches.length} completed`);
+      console.log(`✅ Batch ${batchNumber}/${emailBatches.length} completed`);
 
-      // Add delay between batches (except after the last batch)
+      // Delay between batches
       if (batchIndex < emailBatches.length - 1) {
-        console.log(`Waiting ${BATCH_DELAY / 1000} seconds before next batch...`);
+        console.log(`⏳ Waiting ${BATCH_DELAY / 1000}s before next batch...`);
         await delay(BATCH_DELAY);
       }
     }
 
-    const successfulEmails = results.filter(r => r.success).length;
-    const failedEmails = results.filter(r => !r.success).length;
-    
-    console.log(`Email sending completed: ${successfulEmails} successful, ${failedEmails} failed out of ${emails.length} total`);
+    // ============================================
+    // RETURN RESULTS
+    // ============================================
 
-    // ===== TRACK SUCCESSFUL SENDS =====
-    if (userId && successfulEmails > 0) {
-      try {
-        await emailUsageDb.incrementSends(userId, successfulEmails);
-        console.log(`Tracked ${successfulEmails} sends for user ${userId}`);
-      } catch (trackError) {
-        console.error('Error tracking email sends:', trackError.message);
-        // Don't fail the entire request if tracking fails, just log it
-      }
-    }
+    const successfulEmails = results.filter((r) => r.success).length;
+    const failedEmails = results.filter((r) => !r.success).length;
+
+    console.log(`✅ Email sending completed:`);
+    console.log(`   Successful: ${successfulEmails}`);
+    console.log(`   Failed: ${failedEmails}`);
+    console.log(`   Total: ${emails.length}`);
 
     return NextResponse.json({
+      success: true,
       results: results,
       summary: {
         total: emails.length,
         successful: successfulEmails,
         failed: failedEmails,
         batches: emailBatches.length,
-        batchSize: BATCH_SIZE
-      }
+        batchSize: BATCH_SIZE,
+      },
     });
-
   } catch (error) {
-    console.error('API Error:', error);
-    return NextResponse.json({ 
-      message: 'Internal server error',
-      error: error.message 
-    }, { status: 500 });
+    console.error("❌ API Error:", error);
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error.message,
+      },
+      { status: 500 }
+    );
   } finally {
     if (transporter) {
       await transporter.close();
-      console.log('Transporter closed');
+      console.log("🔒 Transporter closed");
     }
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ message: 'GET method not supported for this endpoint' }, { status: 405 });
+  return NextResponse.json(
+    {
+      error: "Method not allowed",
+      message: "This endpoint only accepts POST requests",
+    },
+    { status: 405 }
+  );
 }

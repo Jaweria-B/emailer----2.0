@@ -1,5 +1,5 @@
-// lib/email-verification-service.js 
-import nodemailer from 'nodemailer';
+// lib/email-verification-service.js
+import nodemailer from "nodemailer";
 
 // Create reusable transporter
 const createTransporter = () => {
@@ -9,14 +9,17 @@ const createTransporter = () => {
     secure: process.env.SMTP_SECURE || false, // true for 465 (SSL), false for other ports
     auth: {
       user: process.env.SMTP_USER,
-      pass: '_VNkv*B$tW#qLC9',
+      pass: process.env.SMTP_PASS,
     },
     // Additional options for better compatibility
     tls: {
       // Do not fail on invalid certs
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
     },
-    from: `"EmailCurator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`
+    // dkim: true,
+    debug: true,
+    logger: true,
+    from: `"Email Curator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
   });
 };
 
@@ -26,30 +29,36 @@ export const generateVerificationCode = () => {
 };
 
 // Send verification email - UPDATED to support both types
-export const sendVerificationEmail = async (email, code, name, verificationType = 'registration') => {
+export const sendVerificationEmail = async (
+  email,
+  code,
+  name,
+  verificationType = "registration"
+) => {
   try {
     const transporter = createTransporter();
-
     // Different subject and content based on verification type
-    const isLogin = verificationType === 'login';
-    const subject = isLogin 
-      ? 'Your EmailCurator Login Code' 
-      : 'Verify Your EmailCurator Account';
-    
-    const title = isLogin 
-      ? 'Login to EmailCurator' 
-      : 'Welcome to EmailCurator!';
-    
-    const greeting = isLogin 
-      ? `Hi ${name}, here's your login code` 
+    const isLogin = verificationType === "login";
+    const subject = isLogin
+      ? "Your Email Curator Login Code"
+      : "Verify Your EmailCurator Account";
+
+    const title = isLogin
+      ? "Login to Email Curator"
+      : "Welcome to Email Curator!";
+
+    const greeting = isLogin
+      ? `Hi ${name}, here's your login code`
       : `Hi ${name}, verify your account to get started`;
-    
-    const instructions = isLogin 
-      ? 'Please use the verification code below to complete your login:' 
-      : 'Please use the verification code below to complete your registration:';
+
+    const instructions = isLogin
+      ? "Please use the verification code below to complete your login:"
+      : "Please use the verification code below to complete your registration:";
 
     const mailOptions = {
-      from: `"EmailCurator" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      from: `"EmailCurator" <${
+        process.env.SMTP_FROM || process.env.SMTP_USER
+      }>`,
       to: email,
       subject: subject,
       html: `
@@ -96,7 +105,9 @@ export const sendVerificationEmail = async (email, code, name, verificationType 
                       
                       <!-- Warning Text -->
                       <p style="color: #666666; font-size: 14px; line-height: 1.5; margin: 20px 0 0 0;">
-                        This code will expire in 15 minutes. If you didn't request this ${isLogin ? 'login' : 'verification'}, please ignore this email.
+                        This code will expire in 15 minutes. If you didn't request this ${
+                          isLogin ? "login" : "verification"
+                        }, please ignore this email.
                       </p>
                       
                     </td>
@@ -118,13 +129,15 @@ export const sendVerificationEmail = async (email, code, name, verificationType 
         </body>
         </html>
       `,
-      text: `${title}\n\n${greeting}\n\nYour verification code is: ${code}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this ${isLogin ? 'login' : 'verification'}, please ignore this email.`
+      text: `${title}\n\n${greeting}\n\nYour verification code is: ${code}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this ${
+        isLogin ? "login" : "verification"
+      }, please ignore this email.`,
     };
 
     await transporter.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error("Email sending error:", error);
     return { success: false, error: error.message };
   }
 };

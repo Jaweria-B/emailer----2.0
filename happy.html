@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email-Craft Database Schema</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 20px;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .schema-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 25px;
+      }
+
+      .table-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .table-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        font-size: 1.3rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .table-header::before {
+        content: "📊";
+        font-size: 1.5rem;
+      }
+
+      .columns-list {
+        padding: 0;
+        list-style: none;
+      }
+
+      .column-item {
+        padding: 12px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+      }
+
+      .column-item:last-child {
+        border-bottom: none;
+      }
+
+      .column-name {
+        font-weight: 600;
+        color: #2d3748;
+        flex: 1;
+      }
+
+      .column-type {
+        color: #718096;
+        font-size: 0.85rem;
+        margin-left: 10px;
+      }
+
+      .key-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+
+      .pk {
+        background: #48bb78;
+        color: white;
+      }
+
+      .fk {
+        background: #ed8936;
+        color: white;
+      }
+
+      .relationship-note {
+        background: #edf2f7;
+        padding: 15px 20px;
+        margin: 10px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        color: #4a5568;
+        border-left: 4px solid #667eea;
+      }
+
+      .stats {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+        font-size: 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📧 Email-Craft Database Schema</h1>
+
+      <div class="stats">
+        <strong>11 Tables</strong> | Subscription-based Bulk Email Platform
+      </div>
+
+      <div class="schema-grid">
+        <!-- Users Table -->
+        <div class="table-card">
+          <div class="table-header">users</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">name</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">email</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">company</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">job_title</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">password_hash</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">email_verified</span>
+              <span class="column-type">boolean</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">status</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">uinfo_key</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            Core user table - connects to subscriptions, campaigns, API keys
+          </div>
+        </div>
+
+        <!-- Packages Table -->
+        <div class="table-card">
+          <div class="table-header">packages</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">name</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">credits</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">sends_per_email</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">price</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">price_pkr</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">price_usd</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">is_active</span>
+              <span class="column-type">boolean</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            💰 Pricing plans with multi-currency support (PKR/USD)
+          </div>
+        </div>
+
+        <!-- User Subscriptions -->
+        <div class="table-card">
+          <div class="table-header">user_subscriptions</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >package_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">plan_id</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">status</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">stripe_subscription_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">stripe_customer_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">package_generations_remaining</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">current_period_start</span>
+              <span class="column-type">timestamp</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">current_period_end</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            Links users to their packages with Stripe integration
+          </div>
+        </div>
+
+        <!-- Payment History -->
+        <div class="table-card">
+          <div class="table-header">payment_history</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">package_id</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">amount</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">stripe_session_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">stripe_payment_intent_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">currency_display</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">amount_display</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">amount_charged_usd</span>
+              <span class="column-type">numeric(10,2)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">exchange_rate</span>
+              <span class="column-type">numeric(10,4)</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">payment_date</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            💳 Payment records with multi-currency tracking
+          </div>
+        </div>
+
+        <!-- Bulk Email Campaigns -->
+        <div class="table-card">
+          <div class="table-header">bulk_email_campaigns</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">name</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">description</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">total_recipients</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">emails_sent</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">emails_failed</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">status</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">agent_config</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            📨 Campaign management with AI agent configuration
+          </div>
+        </div>
+
+        <!-- Bulk Email Sends -->
+        <div class="table-card">
+          <div class="table-header">bulk_email_sends</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >campaign_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">recipient_email</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">recipient_name</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">subject</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">email_body</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">personal_info</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">status</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">message_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">sent_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">opened_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">clicked_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            Individual email tracking with open/click analytics
+          </div>
+        </div>
+
+        <!-- CSV Uploads -->
+        <div class="table-card">
+          <div class="table-header">csv_uploads</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">filename</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">original_filename</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">file_size</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">total_rows</span>
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">headers</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">upload_date</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">📂 User uploaded contact lists</div>
+        </div>
+
+        <!-- User API Keys -->
+        <div class="table-card">
+          <div class="table-header">user_api_keys</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">provider</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">api_key</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">
+            🔑 Third-party API keys (e.g., email providers)
+          </div>
+        </div>
+
+        <!-- User Sessions -->
+        <div class="table-card">
+          <div class="table-header">user_sessions</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name"
+                >user_id <span class="key-badge fk">FK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">session_token</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">expires_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">🔐 Active user sessions</div>
+        </div>
+
+        <!-- Anonymous Devices -->
+        <div class="table-card">
+          <div class="table-header">anonymous_devices</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">device_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">📱 Track anonymous/trial users</div>
+        </div>
+
+        <!-- Anonymous Usage -->
+        <div class="table-card">
+          <div class="table-header">anonymous_usage</div>
+          <ul class="columns-list">
+            <li class="column-item">
+              <span class="column-name"
+                >id <span class="key-badge pk">PK</span></span
+              >
+              <span class="column-type">integer</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">device_id</span>
+              <span class="column-type">text</span>
+            </li>
+            <li class="column-item">
+              <span class="column-name">created_at</span>
+              <span class="column-type">timestamp</span>
+            </li>
+          </ul>
+          <div class="relationship-note">📊 Anonymous usage tracking</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
